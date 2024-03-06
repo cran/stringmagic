@@ -3,16 +3,34 @@
 \name{string_ops_alias}
 \alias{string_ops_alias}
 \alias{string_ops}
+\alias{st_ops}
 \title{Chains basic operations to character vectors}
 \usage{
 string_ops_alias(op = NULL, pre_unik = NULL, namespace = NULL)
 
-string_ops(x, op, pre_unik = NULL, namespace = NULL, envir = parent.frame())
+string_ops(
+  x,
+  ...,
+  op = NULL,
+  pre_unik = NULL,
+  namespace = NULL,
+  envir = parent.frame()
+)
+
+st_ops(
+  x,
+  ...,
+  op = NULL,
+  pre_unik = NULL,
+  namespace = NULL,
+  envir = parent.frame()
+)
 }
 \arguments{
-\item{op}{Character \strong{scalar}. Character scalar containing the comma separated values
+\item{op}{Character \strong{vector} or \code{NULL} (default). Character scalar containing the comma separated values
 of operations to perform to the vector. The 50+ operations are detailed in the help
-page of \code{\link[=string_magic]{string_magic()}}.}
+page of \code{\link[=string_magic]{string_magic()}}. Note that if this argument is provided, then the values in
+\code{...} are ignored.}
 
 \item{pre_unik}{Logical scalar, default is \code{NULL}. Whether to first unique the vector
 before applying the possibly costly string operations, and merging back the result.
@@ -29,6 +47,10 @@ the new \code{string_magic} operations defined within your package.}
 
 \item{x}{A character vector. If not a character vector but atomistic (i.e. not a list),
 it will be converted to a character vector.}
+
+\item{...}{Character \strong{scalars}. Character scalar containing the comma separated values
+of operations to perform to the vector. The 50+ operations are detailed in the help
+page of \code{\link[=string_magic]{string_magic()}}.}
 
 \item{envir}{Environment in which to evaluate the interpolations if the flag \code{"magic"} is provided.
 Default is \code{parent.frame()}.}
@@ -47,6 +69,8 @@ is equivalent to \code{string_magic("{op1, op2 ? x}")}.
 \section{Functions}{
 \itemize{
 \item \code{string_ops_alias()}: \code{string_ops} alias with custom defaults
+
+\item \code{st_ops()}: Alias to \code{string_ops}
 
 }}
 \examples{
@@ -79,6 +103,10 @@ string_ops(cars, "'\\\\d+'x, rm, unik, num, dsort, 3 first")
 # dsort: sorts in decreasing order
 # 3 first: keeps only the first three elements
 
+# You can use several character vectors as operations:
+string_ops(cars, 
+           "'\\\\d+'x, rm, unik",
+           "num, dsort, 3 first")
 
 }
 \seealso{

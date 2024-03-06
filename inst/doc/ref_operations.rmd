@@ -406,6 +406,17 @@ the new element to the right. Option `"both"` inserts the new element on the two
 string_magic("{'3'insert.right, ' + 'collapse ? 1:2}")
 ```
 
+## Deparse an object: dp, deparse
+
+Deparses an object and keeps only the first characters of the deparsed string. Accepts a number as argument. In that case only the first `n` characters are kept. Accepts option `long`: in that case all the lines of the deparsed object are first collapsed.
+
+```{r}
+fml = y ~ x1 + x2
+string_magic("The estimated model is {dp ? fml}.")
+
+string_magic("The estimated model is {10 dp ? fml}.")
+```
+
 # Formatting operations {#sec_format}
  
 ## Change the case: lower
@@ -726,6 +737,7 @@ You can add the following options:
 
   + `q`, `Q`, or `bq`: to quote the elements
   + `or`, `nor`: to finish with an 'or' (or 'nor') instead of an 'and'
+  + `comma`: to finish the enumeration with ", " instead of ", and".
   + `i`, `I`, `a`, `A`, `1`: to enumerate with this prefix, like in: i) one, and ii) two
   + a number: to tell the number of items to display
 ```{r}

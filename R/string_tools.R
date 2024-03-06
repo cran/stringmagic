@@ -13,9 +13,13 @@
 #'
 #' @param x A character vector. If not a character vector but atomistic (i.e. not a list), 
 #' it will be converted to a character vector.
-#' @param op Character **scalar**. Character scalar containing the comma separated values 
+#' @param ... Character **scalars**. Character scalar containing the comma separated values 
 #' of operations to perform to the vector. The 50+ operations are detailed in the help
 #' page of [string_magic()].
+#' @param op Character **vector** or `NULL` (default). Character scalar containing the comma separated values 
+#' of operations to perform to the vector. The 50+ operations are detailed in the help
+#' page of [string_magic()]. Note that if this argument is provided, then the values in 
+#' `...` are ignored.
 #' @param pre_unik Logical scalar, default is `NULL`. Whether to first unique the vector 
 #' before applying the possibly costly string operations, and merging back the result. 
 #' For very large vectors with repeated values the time gained can be substantial. By 
@@ -66,8 +70,12 @@
 #' # dsort: sorts in decreasing order
 #' # 3 first: keeps only the first three elements
 #' 
+#' # You can use several character vectors as operations:
+#' string_ops(cars, 
+#'            "'\\d+'x, rm, unik",
+#'            "num, dsort, 3 first")
 #' 
-string_ops = function(x, op, pre_unik = NULL, namespace = NULL, envir = parent.frame()){
+string_ops = function(x, ..., op = NULL, pre_unik = NULL, namespace = NULL, envir = parent.frame()){
 
   if(missing(x)){
     stop("Argument `x` must be provided. PROBLEM: it is currently missing.")
@@ -86,19 +94,29 @@ string_ops = function(x, op, pre_unik = NULL, namespace = NULL, envir = parent.f
   }
   
   set_pblm_hook()
-
-  check_character(op, mbt = TRUE, scalar = TRUE)
+  
+  check_character(op, null = TRUE, no_na = TRUE)
+  if(!is.null(op)){
+    all_ops = op
+  } else {
+    all_ops = check_set_dots(..., mbt = TRUE, scalar = TRUE, character = TRUE)
+    all_ops = unlist(all_ops)
+  }
+  
   check_logical(pre_unik, null = TRUE, scalar = TRUE)
 
   # For very large vectors, we unique
   n = length(x)
-  if(is.null(pre_unik)) pre_unik = n > 1e6
+  if(is.null(pre_unik)){
+    pre_unik = n > 1e6
+  }
 
   if(pre_unik){
     x_int = to_integer(x)
     x_small = x[!duplicated(x_int)]
 
-    res_small = string_ops(x_small, op, pre_unik = FALSE)
+    res_small = string_ops(x_small, op = all_ops, pre_unik = FALSE, 
+                           namespace = namespace, envir = envir)
     res = res_small[x_int]
   } else {
     
@@ -116,11 +134,15 @@ string_ops = function(x, op, pre_unik = NULL, namespace = NULL, envir = parent.f
       .valid_operators = getOption("string_magic_operations_default")
     }
     
-    group_flag = 1 * grepl("~", op, fixed = TRUE)
-    res = apply_simple_operations(x, "string_ops", op, .check = TRUE, .envir = envir,
+    res = x
+    for(op in all_ops){
+      group_flag = 1 * grepl("~", op, fixed = TRUE)
+      res = apply_simple_operations(res, "string_ops", op, .check = TRUE, .envir = envir,
                                     .data = list(), group_flag = group_flag, 
                                     .delim = c("{", "}"), .user_funs = .user_funs, 
-                                    .valid_operators = .valid_operators)
+                                    .valid_operators = .valid_operators)  
+    }
+    
   }
 
   if("group_index" %in% names(attributes(res))){
@@ -129,6 +151,9 @@ string_ops = function(x, op, pre_unik = NULL, namespace = NULL, envir = parent.f
 
   res
 }
+
+
+
 
 
 #' Detects whether a pattern is in a character string
@@ -282,7 +307,7 @@ string_ops = function(x, op, pre_unik = NULL, namespace = NULL, envir = parent.f
 #'
 #'
 string_is = function(x, ..., fixed = FALSE, ignore.case = FALSE, word = FALSE, 
-                  or = FALSE, pattern = NULL, envir = parent.frame(), last = NULL){
+                     or = FALSE, pattern = NULL, envir = parent.frame(), last = NULL){
 
   x = check_set_character(x, mbt = TRUE, l0 = TRUE)
   if(length(x) == 0){
@@ -625,6 +650,79 @@ string_get = function(x, ..., fixed = FALSE, ignore.case = FALSE, word = FALSE,
 }
 
 
+
+
+#' Splits a character string wrt a pattern
+#' 
+#' Splits a character string with respect to pattern
+#' 
+#' @inheritParams string_split2df
+#' 
+#' @param x A character vector.
+#' @param simplify Logical scalar, default is `TRUE`. If `TRUE`, then when the vector input `x`
+#'  is of length 1, a character vector is returned instead of a list.
+#' 
+#' @inheritSection string_is Generic regular expression flags
+#' 
+#' @return 
+#' If `simplify = TRUE` (default), the object returned is:
+#' + a character vector if `x`, the vector in input, is of length 1: the character vector contains
+#' the result of the split.
+#' + a list of the same length as `x`. The ith element of the list is a character vector
+#' containing the result of the split of the ith element of `x`.
+#' 
+#' If `simplify = FALSE`, the object returned is always a list.
+#' 
+#' @examples 
+#' 
+#' time = "This is the year 2024."
+#' 
+#' # we break the sentence
+#' string_split(time, " ")
+#' 
+#' # simplify = FALSE leads to a list
+#' string_split(time, " ", simplify = FALSE)
+#' 
+#' # let's break at "is"
+#' string_split(time, "is")
+#' 
+#' # now breaking at the word "is"
+#' # NOTE: we use the flag `word` (`w/`)
+#' string_split(time, "w/is")
+#' 
+#' # same but using a pattern from a variable
+#' # NOTE: we use the `magic` flag
+#' pat = "is"
+#' string_split(time, "mw/{pat}")
+#' 
+#' 
+string_split = function(x, split, simplify = TRUE, fixed = FALSE,
+                        ignore.case = FALSE, word = FALSE, 
+                        envir = parent.frame()){
+  
+  x = check_set_character(x, mbt = TRUE, l0 = TRUE)
+
+  check_logical(simplify, scalar = TRUE)
+  check_logical(fixed, scalar = TRUE)
+  check_logical(ignore.case, scalar = TRUE)
+  check_logical(word, scalar = TRUE)
+  
+  pat_parsed = format_simple_regex_flags(split, ignore = ignore.case, 
+                                         fixed = fixed, word = word, 
+                                         magic = TRUE, envir = envir)
+  split = pat_parsed$pattern
+  is_fixed = pat_parsed$fixed
+
+  x_split = strsplit(x, split, fixed = is_fixed, perl = !is_fixed)
+  
+  if(simplify && length(x) == 1){
+    x_split = x_split[[1]]
+  }
+  
+  x_split
+}
+
+
 #' Splits a character vector into a data frame
 #'
 #' Splits a character vector and formats the resulting substrings into a data.frame
@@ -641,7 +739,8 @@ string_get = function(x, ..., fixed = FALSE, ignore.case = FALSE, word = FALSE,
 #' contain the variables of the formula.
 #' @param split A character scalar. Used to split the character vectors. By default 
 #' this is a regular expression. You can use flags in the pattern in the form `flag1, flag2/pattern`.
-#' Available flags are `ignore` (case), `fixed` (no regex), word (add word boundaries). Example:
+#' Available flags are `ignore` (case), `fixed` (no regex), word (add word boundaries), 
+#' magic (add interpolation with `"{}"`). Example:
 #' if "ignore/hello" and the text contains "Hello", it will be split at "Hello". 
 #' Shortcut: use the first letters of the flags. Ex: "iw/one" will split at the word 
 #' "one" (flags 'ignore' + 'word').
@@ -700,8 +799,8 @@ string_get = function(x, ..., fixed = FALSE, ignore.case = FALSE, word = FALSE,
 #'
 #'
 string_split2df = function(x, data = NULL, split = NULL, id = NULL, add.pos = FALSE,
-                        id_unik = TRUE, fixed = FALSE, ignore.case = FALSE,
-                        word = FALSE, dt = FALSE, ...){
+                           id_unik = TRUE, fixed = FALSE, ignore.case = FALSE,
+                           word = FALSE, envir = parent.frame(), dt = FALSE, ...){
 
   if(missing(x)){
     stop("Argument 'x' must be provied. PROBLEM: it is missing.")
@@ -1223,10 +1322,10 @@ paste_conditional = function(x, id, sep = " ", names = TRUE, sort = TRUE){
 #' cbind(cars, new)
 #'
 #'
-string_clean = function(x, ..., replacement = "", pipe = " => ", split = ",[ \n\t]+", 
-                     ignore.case = FALSE, fixed = FALSE, word = FALSE, 
-                     total = FALSE, single = FALSE, envir = parent.frame(), 
-                     namespace = NULL){
+string_clean = function(x, ..., replacement = "", pipe = " => ", split = ",[ \n\t]+",
+                        ignore.case = FALSE, fixed = FALSE, word = FALSE, 
+                        total = FALSE, single = FALSE, envir = parent.frame(), 
+                        namespace = NULL){
 
   x = check_set_character(x, l0 = TRUE)
   if(length(x) == 0){
@@ -1270,9 +1369,11 @@ string_clean = function(x, ..., replacement = "", pipe = " => ", split = ",[ \n\
       res = string_ops(res, di, namespace = namespace)
       next
     }
-
+    
+    pattern_pipe = FALSE
     if(is_pipe && grepl(pipe, di)){
-      # application du pipe
+      # we apply the pipe to 
+      pattern_pipe = TRUE
       di_split = strsplit(di, pipe)[[1]]
       replacement = di_split[2]
       di = di_split[1]
@@ -1283,7 +1384,7 @@ string_clean = function(x, ..., replacement = "", pipe = " => ", split = ",[ \n\
     # we parse the special flags
     is_total = total
     di_parsed = parse_regex_pattern(di, c("ignore", "fixed", "word", "total", "single", "magic"), 
-                                     parse_logical = FALSE, envir = envir)
+                                    parse_logical = FALSE, envir = envir)
     flags = di_parsed$flags
     patterns = di_parsed$patterns
 
@@ -1292,6 +1393,25 @@ string_clean = function(x, ..., replacement = "", pipe = " => ", split = ",[ \n\
     is_ignore = ignore.case || "ignore" %in% flags
     is_word = word || "word" %in% flags
     is_single = single || "single" %in% flags
+    
+    if(pattern_pipe && "magic" %in% flags){
+      # we interpolate the replacement
+      replacement_new = try(string_magic(replacement, .envir = envir), silent = TRUE)
+      if(isError(replacement_new)){
+        stop_hook("CONTEXT: concerns the pattern {bq?replacement}",
+                  "\nINFO: The `magic` flag expands the pattern with `string_magic`.",
+                  "\nPROBLEM: the evaluation with `string_magic` failed, see error below:",
+                  "\n{'^[^\n]+\n'r?replacement_new}")
+      }
+      
+      if(length(replacement_new) != 1){
+        stop_hook("CONTEXT: concerns the pattern {bq?replacement}",
+                  "\nINFO: The `magic` flag expands the pattern with `string_magic`. It must return a vector of length 1.",
+                  "\nPROBLEM: the vector returned is of length {len?replacement_new}.")
+      }
+      
+      replacement = replacement_new
+    }
 
     if(is_split){
       all_patterns = strsplit(patterns, split = split)[[1]]
@@ -1433,7 +1553,8 @@ string_replace = function(x, pattern, replacement = "", pipe = " => ", ignore.ca
   set_pblm_hook()
   
   string_clean(x, pattern, replacement = replacement, pipe = pipe, ignore.case = ignore.case,
-            fixed = fixed, word = word, total = total, single = single, envir = envir, split = "")
+               fixed = fixed, word = word, total = total, single = single, 
+               envir = envir, split = "")
   
 }
 
@@ -1873,9 +1994,133 @@ string_fill = function(x = "", n = NULL, symbol = " ", right = FALSE, center = F
 
 
 
+
+
+#' Extracts a pattern from a character vector
+#' 
+#' Extracts the first, or several, patterns from a character vector.
+#' 
+#' @inheritParams string_is
+#' 
+#' @param x A character vector.
+#' @param pattern A character scalar. It represents the pattern
+#' to be extracted from `x`. By default 
+#' this is a regular expression. You can use flags in the pattern in 
+#' the form `flag1, flag2/pattern`.
+#' Available flags are `ignore` (case), `fixed` (no regex), word (add word boundaries), 
+#' single (select only the first element), and magic (add interpolation with `{}`) . Example:
+#' if `"ignore/hello"` and `x = "Hello world` extracted text is `"Hello"`.
+#' Shortcut: use the first letters of the flags. Ex: "iw/one" will extract the word 
+#' "one" (flags 'ignore' + 'word').
+#' @param single Logical scalar, default is `FALSE`. If `TRUE`, only the first pattern
+#' that is detected will be returned. Note that in that case, a character vector is returned
+#' of the same length as the vector in input. 
+#' @param simplify Logical scalar, default is `TRUE`. If `TRUE`, then when the vector input `x`
+#'  is of length 1, a character vector is returned instead of a list.
+#' @param unlist Logical scalar, default is `FALSE`. If `TRUE`, the function `unlist` is applied
+#' to the resulting list, leading to a character vector in output (instead of a list).
+#' 
+#' @inheritSection string_is Generic regular expression flags
+#' 
+#' @return 
+#' The object returned by this functions can be a list or a character vector. 
+#' 
+#' If `single = TRUE`, a character vector is returned, containing the value of the first match.
+#' If no match is found, an empty string is returned.
+#' 
+#' If `single = FALSE` (the default) and `simplify = TRUE` (default), the object returned is:
+#' + a character vector if `x`, the vector in input, is of length 1: the character vector contains
+#' all the matches and is of length 0 if no match is found.
+#' + a list of the same length as `x`. The ith element of the list is a character vector
+#' of the matches for the ith element of `x`.
+#' 
+#' If `single = FALSE` (default) and `simplify = FALSE`, the object returned is always a list.
+#' 
+#' @examples 
+#' 
+#' cars = head(row.names(mtcars))
+#' 
+#' # Let's extract the first word:
+#' string_extract(cars, "\\w+", single = TRUE)
+#' 
+#' # same using flags
+#' string_extract(cars, "s/\\w+")
+#' 
+#' # extract all words composed on only letters
+#' # NOTE: we use the flag word (`w/`)
+#' string_extract(cars, "w/[[:alpha:]]+")
+#' 
+#' # version without flag:
+#' string_extract(cars, "\\b[[:alpha:]]+\\b")
+#' 
+#' # If a vector of length 1 => a vector is returned
+#' greet = "Hi Tom, how's Mary doing?"
+#' string_extract(greet, "w/[[:upper:]]\\w+")
+#' 
+#' # version with simplify = FALSE => a list is returned
+#' string_extract(greet, "w/[[:upper:]]\\w+", simplify = FALSE)
+#' 
+string_extract = function(x, pattern, single = FALSE, simplify = TRUE, fixed = FALSE,
+                          ignore.case = FALSE, word = FALSE, unlist = FALSE, 
+                          envir = parent.frame()){
+  
+  x = check_set_character(x, mbt = TRUE, l0 = TRUE)
+
+  check_logical(single, scalar = TRUE)
+  check_logical(simplify, scalar = TRUE)
+  check_logical(fixed, scalar = TRUE)
+  check_logical(ignore.case, scalar = TRUE)
+  check_logical(word, scalar = TRUE)
+  check_logical(unlist, scalar = TRUE)
+  
+  pat_parsed = parse_regex_pattern(pattern, c("fixed", "word", "ignore", "magic", "single"),
+                                   envir = envir, parse_logical = FALSE)
+  
+  flags = pat_parsed$flags
+  
+  is_single = single || "single" %in% flags
+  is_fixed = fixed || "fixed" %in% flags
+  is_word = word || "word" %in% flags
+  is_ignore = ignore.case || "ignore" %in% flags
+  is_magic = "magic" %in% flags
+  
+  info = format_simple_regex_flags(pat_parsed$patterns, 
+                                   fixed = is_fixed, word = is_word, 
+                                   ignore = is_ignore, magic = is_magic, envir = envir)
+  
+  pattern = info$pattern
+  is_fixed = info$fixed
+  
+  if(length(x) == 0){
+    if(is_single || simplify){
+      return(character(0))
+    } else {
+      # simplify = FALSE and single = FALSE always return a list
+      return(list())
+    }    
+  }
+  
+  if(is_single){
+    x_pat = regexpr(pattern, x, fixed = is_fixed, perl = !is_fixed)
+    
+    res = substr(x, x_pat, x_pat - 1 + attr(x_pat, "match.length"))
+  } else {
+    res = regmatches(x, gregexpr(pattern, x, fixed = is_fixed, perl = !is_fixed))
+    
+    if(unlist || (simplify && length(x) == 1)){
+      res = unlist(res)
+    }
+  }
+  
+  res
+}
+
+
 ####
 #### dedicated utilities ####
 ####
+
+
 
 #' `stringmagic`'s regular expression parser
 #' 
@@ -1925,7 +2170,8 @@ parse_regex_pattern = function(pattern, authorized_flags, parse_flags = TRUE,
   # in: "fw/hey!, bonjour, a[i]"
   # common authorized_flags: c("fixed", "word", "ignore")
 
-  info_pattern = cpp_parse_regex_pattern(pattern, parse_flags = parse_flags, parse_logical = parse_logical)
+  info_pattern = cpp_parse_regex_pattern(pattern, parse_flags = parse_flags, 
+                                         parse_logical = parse_logical)
   
   if(!is.null(info_pattern$error)){
     main_msg = .sma("Problem found in the regex pattern {'50|..'k, Q ? pattern}.",
@@ -2148,22 +2394,43 @@ to_integer_single = function(x){
 }
 
 
+####
+#### Aliases ####
+####
 
 
+#' @describeIn string_ops Alias to `string_ops`
+st_ops = string_ops
 
+#' @describeIn string_is Alias to `string_is`
+st_is = string_is
 
+#' @describeIn string_is Alias to `string_any`
+st_any = string_any
 
+#' @describeIn string_is Alias to `string_all`
+st_all = string_all
 
+#' @describeIn string_is Alias to `string_which`
+stwhich = string_which
 
+#' @describeIn string_get Alias to `string_get`
+stget = string_get
 
+#' @describeIn string_split Alias to `string_split`
+stsplit = string_split
 
+#' @describeIn string_clean Alias to `string_clean`
+stclean = string_clean
 
+#' @describeIn string_clean Alias to `string_replace`
+streplace = string_replace
 
+#' @describeIn string_vec Alias to `string_vec`
+stvec = string_vec
 
-
-
-
-
+#' @describeIn string_extract Alias to `string_extract`
+stextract = string_extract
 
 
 

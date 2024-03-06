@@ -3,6 +3,7 @@
 \name{string_magic}
 \alias{string_magic}
 \alias{.string_magic}
+\alias{sma}
 \title{String interpolation with operation chaining}
 \usage{
 string_magic(
@@ -34,6 +35,25 @@ string_magic(
   .last = NULL,
   .nest = FALSE,
   .trigger = TRUE,
+  .namespace = NULL
+)
+
+sma(
+  ...,
+  .envir = parent.frame(),
+  .sep = "",
+  .vectorize = FALSE,
+  .delim = c("{", "}"),
+  .last = NULL,
+  .post = NULL,
+  .nest = FALSE,
+  .collapse = NULL,
+  .invisible = FALSE,
+  .default = NULL,
+  .trigger = TRUE,
+  .check = TRUE,
+  .class = NULL,
+  .help = NULL,
   .namespace = NULL
 )
 }
@@ -164,6 +184,8 @@ you can pass keywords or regular expressions and fecth select pieces from the ma
 
 \item \code{.string_magic()}: A simpler version of \code{string_magic} without any error handling to save a few micro seconds
 
+\item \code{sma()}: Alias to \code{string_magic}
+
 }}
 \section{Interpolation and string operations}{
  Principle:
@@ -173,7 +195,8 @@ to "hello world".
 
 To any interpolation you can add operations. Taking the previous example, say we want to display
 "hello W O R L D". This means upper casing all letters of the interpolated variable and adding a space between
-each of them. Do you think we can do that? Of course yes: string_magic("hello {upper, ''s, c ? x}"). And that's it.
+each of them. Do you think we can do that? Of course yes:
+\code{string_magic("hello {upper, ''s, c ? x}")}. And that's it.
 
 Now let's explain what happened. Within the \code{{}} \emph{box}, we first write a set of
 operations, here "upper, ''s, c", then add "?" and finally write
@@ -183,7 +206,7 @@ with the empty string, 'c': concatenating with spaces the vector of string that 
 The question mark means that the expression coming after it is to be evaluated
 (this is opposed to the exclamation mark presented next).
 
-The syntax is always the same: {operations ? expression}, where the operations section
+The syntax is always the same: \code{{operations ? expression}}, where the operations section
 is a \emph{comma separated} list of operations.
 These operations are of the form \verb{'arg'op}, with \code{arg} the argument to the operator
 code \code{op}. These operations are performed sequantially from left to right.
@@ -210,7 +233,7 @@ Verbatim evaluation is a powerful way to apply operations to plain text. For exa
 
 (A note in passing. The spaces surrounding the exclamation mark are non necessary,
 but when one space is present on both sides of the \code{!}, then the verbatim
-expression only begins after it. Ex: "{upper! hi}" leads to " HI" while \code{"{upper ! hi}"}
+expression only begins after it. Ex: \code{"{upper! hi}"} leads to " HI" while \code{"{upper ! hi}"}
 leads to "HI" and \code{"{upper !  hi}"} leads to " HI".)
 
 The second advantage of verbatim evaluations is \emph{nesting}. Anything in a verbatim
@@ -394,6 +417,11 @@ to "Small numbers only: 5 and 7";
 \item insert: inserts a new element to the vector. Options: "right" and "both". Option "right" adds
 the new element to the right. Option "both" inserts the new element on the two sides of the vector.
 Example: \code{string_magic("{'3'insert.right, ' + 'c ? 1:2}")} leads to "1 + 2 + 3".
+\item \code{dp} or \code{deparse}: Deparses an object and keeps only the first characters of
+the deparsed string. Accepts a number as argument. In that case only the first \code{n}
+characters are kept. Accepts option \code{long}: in that case all the
+lines of the deparsed object are first collapsed.
+Example: \verb{fml = y ~ x1 + x2; string_magic("The estimated model is \{dp ? fml\}.")}
 }
 }
 
@@ -518,6 +546,7 @@ You can add the following options by appending the letter to enum after a dot:
 \itemize{
 \item q, Q, or bq: to quote the elements
 \item or, nor: to finish with an 'or' (or 'nor') instead of an 'and'
+\item comma: to finish the enumeration with ", " instead of ", and".
 \item i, I, a, A, 1: to enumerate with this prefix, like in: i) one, and ii) two
 \item a number: to tell the number of items to display
 Ex.1: \verb{x = c("Marv", "Nancy"); string_magic("The main characters are \{enum ? x\}.")} leads to
@@ -748,7 +777,7 @@ was open. On the other hand, you need to escape it in Ex.2.
 
 Alternatively, use the argument \code{.delim} to set custom delimiters.
 
-Ex.3: string_magic("I {'can {write} {{what}} I want'}") leads to \code{"I can {write} {{what}} I want"}.
+Ex.3: \code{string_magic("I {'can {write} {{what}} I want'}")} leads to \code{"I can {write} {{what}} I want"}.
 
 Since \code{{expr}} evaluates \code{expr}, the stuff inside the \emph{box}, you can pass a
 character string and it will stay untouched.

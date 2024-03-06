@@ -15,6 +15,7 @@ string_split2df(
   fixed = FALSE,
   ignore.case = FALSE,
   word = FALSE,
+  envir = parent.frame(),
   dt = FALSE,
   ...
 )
@@ -42,7 +43,8 @@ contain the variables of the formula.}
 
 \item{split}{A character scalar. Used to split the character vectors. By default
 this is a regular expression. You can use flags in the pattern in the form \verb{flag1, flag2/pattern}.
-Available flags are \code{ignore} (case), \code{fixed} (no regex), word (add word boundaries). Example:
+Available flags are \code{ignore} (case), \code{fixed} (no regex), word (add word boundaries),
+magic (add interpolation with \code{"{}"}). Example:
 if "ignore/hello" and the text contains "Hello", it will be split at "Hello".
 Shortcut: use the first letters of the flags. Ex: "iw/one" will split at the word
 "one" (flags 'ignore' + 'word').}
@@ -65,6 +67,9 @@ as fixed (and not as a regular expression).}
 and b) patterns can be chained by separating them with a comma, they are combined with an OR logical operation.
 Example: if \code{word = TRUE}, then pattern = "The, mountain" will select strings containing either the word
 'The' or the word 'mountain'.}
+
+\item{envir}{Environment in which to evaluate the interpolations if the flag \code{"magic"} is provided.
+Default is \code{parent.frame()}.}
 
 \item{dt}{Logical, default is \code{FALSE}. Whether to return a \code{data.table}. See also the function \code{string_split2dt}.}
 

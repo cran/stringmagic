@@ -6,6 +6,23 @@
 
 chunk("tools")
 
+
+####
+#### string_ops ####
+####
+
+cars = row.names(mtcars)
+val = string_ops(cars, "'\\d+'x, rm, unik, num, dsort, 3 first")
+test(val, c(914, 710, 450))
+
+val = string_ops(cars, "'\\d+'x, rm", "unik, num", "dsort, 3 first")
+test(val, c(914, 710, 450))
+
+all_months = month.name[airquality$Month]
+val = string_ops(all_months, "lower", "5 firstchar", pre_unik = TRUE)
+val_bis = tolower(substr(all_months, 1, 5))
+test(val, val_bis)
+
 ####
 #### string_is ####
 ####
@@ -118,6 +135,7 @@ test(val, c("Hornet", "Honda", "Mazda", "Merc", "Maserati"))
 #### string_clean ####
 ####
 
+
 x = c("hello world  ", "it's 5 am....")
 
 val = string_clean(x, "o", "f/.")
@@ -158,6 +176,10 @@ test(val, "bonj_r les gens")
 vowels_split = strsplit(vowels, "")[[1]]
 val = string_clean("bonjour les gens", "m/{'|'c?vowels_split} => _")
 test(val, "b_nj__r l_s g_ns")
+
+vowels = "aeiou"
+replace = "."
+val = string_clean(x, "m/[{vowels}] => {replace}")
 
 ####
 #### string_split2df ####
@@ -302,3 +324,47 @@ cars = paste_conditional(carname ~ gear + carb, base_cars, sep = ", ")
 test(cars, c("Hornet 4 Drive, Valiant", "Hornet Sportabout", "Datsun 710", "Mazda RX4, Mazda RX4 Wag"))
 
 test(names(cars), c("gear: 3, carb: 1", "gear: 3, carb: 2", "gear: 4, carb: 1", "gear: 4, carb: 4"))
+
+
+####
+#### string_extract ####
+####
+
+cars = row.names(mtcars)
+val = string_extract(cars, "s/^\\w+")
+val_bis = gsub(" .+", "", cars)
+test(val, val_bis)
+
+val = unlist(string_extract(cars, "^\\w+"))
+test(val, val_bis)
+
+val = string_extract(cars, "^\\w+", unlist = TRUE)
+test(val, val_bis)
+
+pat = "\\w+"
+val = string_extract(cars, "m/^{pat}", unlist = TRUE)
+test(val, val_bis)
+
+
+####
+#### string_split ####
+####
+
+time = "This is the year 2024."
+
+val = string_split(time, " ")
+test(val, c("This", "is", "the", "year", "2024."))
+
+val = string_split(time, " ", simplify = FALSE)
+test(val, list(c("This", "is", "the", "year", "2024.")))
+
+val = string_split(time, "is")
+test(val, c("Th", " ", " the year 2024."))
+
+val = string_split(time, "w/is")
+test(val, c("This ", " the year 2024."))
+
+pat = "is"
+val = string_split(time, "wm/{pat}")
+test(val, c("This ", " the year 2024."))
+

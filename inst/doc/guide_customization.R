@@ -54,7 +54,7 @@ string_magic_register_fun(fun_emph, "emph")
 
 # C) use it
 x = string_vec("right, now")
-string_magic("Take heed, {emph, collapse? x}.")
+string_magic("Take heed, {emph, collapse ? x}.")
 
 ## -----------------------------------------------------------------------------
 fun_emph = function(x, argument, options, ...){

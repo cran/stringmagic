@@ -189,6 +189,12 @@ string_magic("Small numbers only: {if(.>20 ; nuke), enum ? x}.")
 string_magic("{'3'insert.right, ' + 'collapse ? 1:2}")
 
 ## -----------------------------------------------------------------------------
+fml = y ~ x1 + x2
+string_magic("The estimated model is {dp ? fml}.")
+
+string_magic("The estimated model is {10 dp ? fml}.")
+
+## -----------------------------------------------------------------------------
 x = "MesSeD uP CaSe"
 string_magic("from a {x} to {lower?x}")
 

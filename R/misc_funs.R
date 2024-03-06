@@ -10,6 +10,7 @@
 #### string manipulation ####
 ####
 
+
 string_to_ascii = function(x, options){
   # force to ASCII using iconv. Keeps track of encoding error
 
@@ -64,6 +65,7 @@ string_to_ascii = function(x, options){
 ####
 #### internal ####
 ####
+
 
 is_numeric_in_char = function(x){
   res = tryCatch(as.numeric(x), warning = function(x) "not numeric")
@@ -314,8 +316,10 @@ enum_main = function(x, options){
   }
   
   oxford = opt_equal(options, "oxford")
+  comma = opt_equal(options, "comma")
   
-  enumerate_items(x, quote = quote, or = or, enum = enum, nmax = nmax, oxford = oxford)
+  enumerate_items(x, quote = quote, or = or, enum = enum, nmax = nmax, 
+                  oxford = oxford, comma = comma)
 }
 
 format_difftime = function(x, options = character()){
@@ -471,7 +475,7 @@ fsignif = function (x, s = 2, r = 0, commas = TRUE){
 
 
 enumerate_items = function (x, or = FALSE, quote = NULL,
-                            enum = FALSE, nmax = 7, oxford = FALSE){
+                            enum = FALSE, nmax = 7, oxford = FALSE, comma = FALSE){
   # function that enumerates items
   # in argument type, you can have a mix of the different arguments, all separated with a "."
 
@@ -536,9 +540,16 @@ enumerate_items = function (x, or = FALSE, quote = NULL,
     } else if(identical(or, "nor")){
       and_or = " nor "
     }
-
-    if(is_enum){
-      res = paste0(paste0(enum_all[-n], x[-n], collapse = ", "), enum_comma, and_or, enum_all[n], x[n])
+    
+    if(comma){
+      if(is_enum){
+        x = paste0(enum_all, x)
+      }
+      
+      res = paste0(x, collapse = ", ")
+    } else if(is_enum){
+      res = paste0(paste0(enum_all[-n], x[-n], collapse = ", "), 
+                   enum_comma, and_or, enum_all[n], x[n])
     } else {
       if(oxford){
         and_or = paste0(",", and_or)
@@ -681,7 +692,7 @@ is_operator = function(x, op){
   if(length(x) <= 1){
     res = FALSE
   } else {
-    res = as.character(x[[1]]) %in% op
+    res = as.character(x[[1]])[1] %in% op
   }
 
   res
@@ -721,6 +732,36 @@ fml_extract_elements = function(fml){
   res = rev(main_elements)
 
   res
+}
+
+is_any_variable = function(x){
+  # x: must be an expression
+  length(all.vars(x, max.names = 1)) == 1
+}
+
+extract_first_variable = function(expr){
+  # this function returns an expression
+  # what is considered a variable is either a name (x), either a name subsetted (data$value)
+  
+  if(!is_any_variable(expr)){
+    return(NULL)
+  }
+  
+  if(length(expr) == 1){
+    return(expr)
+  }
+  
+  if(is_operator(expr, c("[", "[[", "$"))){
+    return(expr)
+  } else {
+    for(i in 2:length(expr)){
+      if(is_any_variable(expr[[i]])){
+        return(extract_first_variable(expr[[i]]))
+      }
+    }
+  }
+  
+  return(NULL)
 }
 
 insert = function(x, y, i, replace = FALSE){
@@ -1093,6 +1134,7 @@ fix_pkgwdown_path = function(){
 ####
 #### timer ####
 ####
+
 
 timer = function(type = "simple"){
   
