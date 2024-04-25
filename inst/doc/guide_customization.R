@@ -116,7 +116,7 @@ cat_magic("{header!Important message to you, user}",
           "The algorithm converged in {time}s.", 
           .sep = "\n", .namespace = "superpack")
 
-## ---- error = TRUE------------------------------------------------------------
+## ----error = TRUE-------------------------------------------------------------
 time = 0.7
 cat_magic("{header!Important message to you, user}",
           "The algorithm converged in {time}s.", 
@@ -125,7 +125,7 @@ cat_magic("{header!Important message to you, user}",
 ## -----------------------------------------------------------------------------
 cat_magic = stringmagic::cat_magic_alias(.namespace = "superpack")
 
-## ---- error = TRUE------------------------------------------------------------
+## ----error = TRUE-------------------------------------------------------------
 time = 0.7
 cat_magic("{header!Important message to you, user}",
           "The algorithm converged in {time}s.", 

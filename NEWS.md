@@ -1,4 +1,10 @@
 
+# stringmagic 1.1.1
+
+## Hot fix
+
+- make `stringmagic` compatible with `R` < 4.1.0 by removing calls to `...names()`.
+
 # stringmagic 1.1.0
 
 ## New functions

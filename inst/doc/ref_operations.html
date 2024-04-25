@@ -11,7 +11,7 @@
 
 <meta name="author" content="Laurent R. Bergé" />
 
-<meta name="date" content="2024-03-06" />
+<meta name="date" content="2024-04-25" />
 
 <title>string_magic’s operations: The reference</title>
 
@@ -1567,7 +1567,7 @@ font-size: 0.95em;
 <h1 class="title toc-ignore"><code>string_magic</code>’s operations: The
 reference</h1>
 <h4 class="author">Laurent R. Bergé</h4>
-<h4 class="date">2024-03-06</h4>
+<h4 class="date">2024-04-25</h4>
 
 </div>
 
@@ -2423,11 +2423,11 @@ two</li>
 <span id="cb52-10"><a href="#cb52-10" tabindex="-1"></a><span class="co"># default is at 7</span></span>
 <span id="cb52-11"><a href="#cb52-11" tabindex="-1"></a>x <span class="ot">=</span> <span class="fu">string_magic</span>(<span class="st">&quot;x{sample(100, 30)}&quot;</span>)</span>
 <span id="cb52-12"><a href="#cb52-12" tabindex="-1"></a><span class="fu">string_magic</span>(<span class="st">&quot;The problematic variables are {&#39;x&#39;sort.num, enum ? x}.&quot;</span>)</span>
-<span id="cb52-13"><a href="#cb52-13" tabindex="-1"></a><span class="co">#&gt; [1] &quot;The problematic variables are x2, x3, x20, x21, x28, x31 and 24 others.&quot;</span></span>
+<span id="cb52-13"><a href="#cb52-13" tabindex="-1"></a><span class="co">#&gt; [1] &quot;The problematic variables are x4, x5, x9, x10, x14, x16 and 24 others.&quot;</span></span>
 <span id="cb52-14"><a href="#cb52-14" tabindex="-1"></a></span>
 <span id="cb52-15"><a href="#cb52-15" tabindex="-1"></a><span class="co"># you can augment or reduce the numbers to display with an option</span></span>
 <span id="cb52-16"><a href="#cb52-16" tabindex="-1"></a><span class="fu">string_magic</span>(<span class="st">&quot;The problematic variables are {&#39;x&#39;sort.num, enum.3 ? x}.&quot;</span>)</span>
-<span id="cb52-17"><a href="#cb52-17" tabindex="-1"></a><span class="co">#&gt; [1] &quot;The problematic variables are x2, x3 and 28 others.&quot;</span></span></code></pre></div>
+<span id="cb52-17"><a href="#cb52-17" tabindex="-1"></a><span class="co">#&gt; [1] &quot;The problematic variables are x4, x5 and 28 others.&quot;</span></span></code></pre></div>
 </div>
 <div id="formatted-length-len-len" class="section level2" number="4.3">
 <h2><span class="header-section-number">4.3</span> Formatted length:
@@ -2490,7 +2490,7 @@ objects of class <code>POSIXt</code> or <code>difftime</code>.</p>
 <div class="sourceCode" id="cb56"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1" tabindex="-1"></a>x <span class="ot">=</span> <span class="fu">Sys.time</span>()</span>
 <span id="cb56-2"><a href="#cb56-2" tabindex="-1"></a><span class="fu">Sys.sleep</span>(<span class="fl">0.15</span>) </span>
 <span id="cb56-3"><a href="#cb56-3" tabindex="-1"></a><span class="fu">string_magic</span>(<span class="st">&quot;Time: {difftime ? x}&quot;</span>)</span>
-<span id="cb56-4"><a href="#cb56-4" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Time: 160ms&quot;</span></span></code></pre></div>
+<span id="cb56-4"><a href="#cb56-4" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Time: 162ms&quot;</span></span></code></pre></div>
 </div>
 </div>
 

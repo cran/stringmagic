@@ -1,7 +1,7 @@
 Package: stringmagic
 Type: Package
 Title: Character String Operations and Interpolation, Magic Edition
-Version: 1.1.0
+Version: 1.1.1
 Authors@R: 
   c(person(given = "Laurent R", family = "Berge", role = c("aut", "cre"), email = "laurent.berge@u-bordeaux.fr",
          comment = c(ORCID = "0000-0003-2736-1917")),
@@ -18,9 +18,9 @@ URL: https://lrberge.github.io/stringmagic/,
 VignetteBuilder: knitr
 RoxygenNote: 7.2.3
 NeedsCompilation: yes
-Packaged: 2024-03-06 14:08:58 UTC; a-berge028
+Packaged: 2024-04-25 09:33:53 UTC; lrberge
 Author: Laurent R Berge [aut, cre] (<https://orcid.org/0000-0003-2736-1917>),
   Morgan Jacob [ctb]
 Maintainer: Laurent R Berge <laurent.berge@u-bordeaux.fr>
 Repository: CRAN
-Date/Publication: 2024-03-06 14:40:02 UTC
+Date/Publication: 2024-04-25 10:10:03 UTC
