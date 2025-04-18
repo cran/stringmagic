@@ -27,6 +27,9 @@
 #' @param .envir An environment used to evaluate the variables in `"{}"`. By default the variables are
 #' evaluated using the environment from where the function is called or using the named 
 #' arguments passed to the function.
+#' @param .data A list used to evaluate the variables in `"{}"`. Default is the empty list.
+#' By default the variables are evaluated using the environment from where the 
+#' function is called or using the named arguments passed to the function.
 #' @param .sep Character scalar, default is the empty string `""`. It is used to collapse all
 #'  the elements in `...` before applying any operation.
 #' @param .vectorize Logical scalar, default is `FALSE`. If `TRUE`, Further, elements in `...` are 
@@ -303,6 +306,15 @@
 #' + rev: reverses the vector. Example: `string_magic("{rev, ''c ? 1:3}")` leads to "321".
 #' + unik: makes the string vector unique. Example: `string_magic("Iris species: {unik, C ? iris$Species}.")`
 #' leads to "Iris species: setosa, versicolor and virginica.".
+#' + table: computes the frequency of each element and attaches each element to its frequency. 
+#' Accepts an argument which must be a character string representing a `string_magic` interpolation
+#' with the following variables: `x` (the element), `n` (its count) and `s` (its share). The default is `'{x} ({n ? n})'`. By default the resulting string vector is sorted by decreasing frequency. 
+#' You can change how the vector is sorted with five options: `sort` (sorts on the elements), 
+#' `dsort` (decreasing sort), `fsort` (sorts on frequency), 
+#' `dfsort` (decreasing sort on freq. -- default), 
+#' `nosort` (keeps the order of the first elements). Note that you can combine several sorts 
+#' (to resolve the ties of elements with same frequencies).
+#' Example: `string_magic("Freq. of months: {'{x} ({n})'table, enum ? month.name[airquality$Month]}.")`
 #' + each: repeats each element of the vector `n` times. Option "c" then collapses the full vector 
 #' with the empty string as a separator. Ex.1: `string_magic("{/x, y}{2 each ? 1:2}")` leads to the 
 #' vector `c("x1", "y1", "x2", "y2")`. Ex.2: `string_magic("Large number: 1{5 each.c ! 0}")` leads to 
@@ -354,9 +366,9 @@
 #' back quotes. `x = c("Mark", "Pam"); string_magic("Hello {q, C ? x}!")` leads to "Hello 'Mark' and 'Pam'!".
 #' + format, Format: applies the base R's function [base::format()] to the string. 
 #' By default, the values are left aligned, *even numbers* (differently from [base::format()]'s behavior).
-#' The upper case command (`Format`) applies right alignment. Options: "0", "zero", "right", "center".
+#' The upper case command (`Format`) applies right alignment. Options: "0", "zero", "left", "right", "center".
 #' Options "0" or "zero" fills the blanks with 0s: useful to format numbers. Option "right" right aligns,
-#' and "center" centers the strings.
+#' and "center" centers the strings. Default is left alignment.
 #' Ex: `x = c(1, 12345); string_magic("left: {format.0, q, C ? x}, right: {Format, q, C ? x}")` 
 #' leads to "left: '000001' and '12,345', right: '     1' and '12,345'".
 #' + %: applies [base::sprintf()] formatting. The syntax is 'arg'% with arg an sprintf formatting,
@@ -371,6 +383,16 @@
 #' a warning is prompted. Option "silent" disables the warning in case of failed conversion. The conversion 
 #' is done with [base::iconv()], option "utf8" indicates that the source endocing is UTF-8, can be useful 
 #' in some cases.
+#' + round, r0 to r6: formats numbers by rounding at a given level. Options:  `0` to `9`, `int`, `nocomma`, `s0`-`s9`. 
+#' Option `0` to `9` controls the number of digits to round at. 
+#' Option `int` is whether to preserve integers from formattting.
+#' Option `nocomma` conrtols whether to drop the comma separating the thousands.
+#' `s0`-`s9` also keeps a given number of significant digits.
+#' + signif, s0 to s6: formats numbers by displaying a certain number of significant digits. Options:  `0` to `9`, `int`, `nocomma`, `r0`-`r9`. 
+#' Option `0` to `9` controls the number of significant digits to display. 
+#' Option `int` is whether to preserve integers from formattting.
+#' Option `nocomma` conrtols whether to drop the comma separating the thousands.
+#' `r0`-`r9` also rounds at a given number of decimals.
 #' + n: formats integers by adding a comma to separate thousands. Options: "letter", "upper", "0", "zero".
 #' The option "letter" writes the number in letters (large numbers keep their numeric format). The option
 #' "upper" is like the option "letter" but uppercases the first letter. Options "0" or "zero" left pads
@@ -405,7 +427,8 @@
 #'  will always be of maximum size `n`, while in the first case they can be of length `n + nchar(s)`.
 #'   Ex: `string_magic("{4k ! long sentence}")` leads to "long",  `string_magic("{'4|..'k ! long sentence}") `
 #' leads to "long..", `string_magic("{'4||..'k ! long sentence}")` leads to "lo..".
-#' + fill: fills the character strings up to a size. Options: "right", "center".
+#' + fill, align (alias), width (alias): fills the character strings up to a size in order
+#' to fit a given width. Options: "left", "right", "center".
 #' Accepts arguments of the form `'n'` or `'n|s'`, with `n` a number and `s` a symbol. 
 #' Default is left-alignment of the strings. 
 #' Option "right" right aligns and "center" centers the strings. When using `'n|s'`, the symbol `s`
@@ -413,8 +436,8 @@
 #' maximum size of the character string is used. See help for [string_fill()] for more information.
 #' Ex.1: `string_magic("Numbers: {'5|0'fill.right, C ? c(1, 55)}")` leads to "Numbers: 00001 and 00055".
 #' + paste, append: pastes some character to all elements of the string. This operation has no default.
-#' Options: "both", "right", "front", "back", "delete". By default, a string is pasted on the left.
-#' Option "right" pastes on the right and "both" pastes on both sides. Option "front" only 
+#' Options: "left", "both", "right", "front", "back", "delete". By default, a string is pasted on the left.
+#' By default, it pastes on the left. Option "right" pastes on the right and "both" pastes on both sides. Option "front" only 
 #' pastes on the first element while option "back" only pastes on the last element. Option "delete"
 #' first replaces all elements with the empty string.
 #' Example: `string_magic("6 = {'|'paste.both, ' + 'c ? -3:-1}")` leads to "6 = |-3| + |-2| + |-1|".
@@ -462,17 +485,18 @@
 #' By default, commas are added to separate thousands. Use uption "num" to preserve
 #' a regular numeric format.
 #' Example: `string_magic("Size = {len ? 1:5000}")` leads to "Size = 5,000".
-#' + width: formats the string to fit a given width by cutting at word boundaries. 
+#' + swidth: stands for screen width. Formats the string to fit a given width 
+#' by cutting at word boundaries and adding newlines appropriately. 
 #' Accepts arguments of the form `'n'` or `'n|s'`, with `n` a number and `s` a string. 
 #' An argument of the form `'n|s'` will add `s` at the beginning of each line. Further,
 #' by default a trailing white space is added to `s`; to remove this 
 #' behavior, add an underscore at the end of it. 
-#' The argument `n` is either 
-#' an integer giving the target character width (minimum is 15), or it can be a fraction expressing the 
+#' The argument `n` is either an integer giving the target character 
+#' width (minimum is 15), or it can be a fraction expressing the 
 #' target size as a fraction of the current screen. Finally it can be an expression that 
 #' uses the variable `.sw` which will capture the value of the current screen width.
-#' Ex.1: `string_magic("{15 width ! this is a long sentence}")` leads to "this is a long\\nsentence".
-#' Ex.2: `string_magic("{15 width.#> ! this is a long sentence}")` leads to "#> this is a long\\n#> sentence".
+#' Ex.1: `string_magic("{15 swidth ! this is a long sentence}")` leads to "this is a long\\nsentence".
+#' Ex.2: `string_magic("{15 swidth.#> ! this is a long sentence}")` leads to "#> this is a long\\n#> sentence".
 #' + difftime: displays a formatted time difference. Option "silent" does not report a warning if the
 #' operation fails. It accepts either objects of class `POSIXt` or `difftime`.
 #' Example: `x = Sys.time() ; Sys.sleep(0.5) ; string_magic("Time: {difftime ? x}")` leads to something 

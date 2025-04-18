@@ -9,6 +9,7 @@
 string_magic(
   ...,
   .envir = parent.frame(),
+  .data = list(),
   .sep = "",
   .vectorize = FALSE,
   .delim = c("{", "}"),
@@ -28,6 +29,7 @@ string_magic(
 .string_magic(
   ...,
   .envir = parent.frame(),
+  .data = list(),
   .sep = "",
   .vectorize = FALSE,
   .delim = c("{", "}"),
@@ -41,6 +43,7 @@ string_magic(
 sma(
   ...,
   .envir = parent.frame(),
+  .data = list(),
   .sep = "",
   .vectorize = FALSE,
   .delim = c("{", "}"),
@@ -78,6 +81,10 @@ format the time. Ex: \code{.now('\%Y-\%m \%H:\%m')}.}
 \item{.envir}{An environment used to evaluate the variables in \code{"{}"}. By default the variables are
 evaluated using the environment from where the function is called or using the named
 arguments passed to the function.}
+
+\item{.data}{A list used to evaluate the variables in \code{"{}"}. Default is the empty list.
+By default the variables are evaluated using the environment from where the
+function is called or using the named arguments passed to the function.}
 
 \item{.sep}{Character scalar, default is the empty string \code{""}. It is used to collapse all
 the elements in \code{...} before applying any operation.}
@@ -395,6 +402,15 @@ leads to "5 = 3 + 2". See the operation "sort" for a description of the argument
 \item rev: reverses the vector. Example: \code{string_magic("{rev, ''c ? 1:3}")} leads to "321".
 \item unik: makes the string vector unique. Example: \code{string_magic("Iris species: {unik, C ? iris$Species}.")}
 leads to "Iris species: setosa, versicolor and virginica.".
+\item table: computes the frequency of each element and attaches each element to its frequency.
+Accepts an argument which must be a character string representing a \code{string_magic} interpolation
+with the following variables: \code{x} (the element), \code{n} (its count) and \code{s} (its share). The default is \code{'{x} ({n ? n})'}. By default the resulting string vector is sorted by decreasing frequency.
+You can change how the vector is sorted with five options: \code{sort} (sorts on the elements),
+\code{dsort} (decreasing sort), \code{fsort} (sorts on frequency),
+\code{dfsort} (decreasing sort on freq. -- default),
+\code{nosort} (keeps the order of the first elements). Note that you can combine several sorts
+(to resolve the ties of elements with same frequencies).
+Example: \code{string_magic("Freq. of months: {'{x} ({n})'table, enum ? month.name[airquality$Month]}.")}
 \item each: repeats each element of the vector \code{n} times. Option "c" then collapses the full vector
 with the empty string as a separator. Ex.1: \code{string_magic("{/x, y}{2 each ? 1:2}")} leads to the
 vector \code{c("x1", "y1", "x2", "y2")}. Ex.2: \code{string_magic("Large number: 1{5 each.c ! 0}")} leads to
@@ -449,9 +465,9 @@ the empty string. This means that \code{string_magic("ws.punct ! Meg's car")} wi
 back quotes. \verb{x = c("Mark", "Pam"); string_magic("Hello \{q, C ? x\}!")} leads to "Hello 'Mark' and 'Pam'!".
 \item format, Format: applies the base R's function \code{\link[base:format]{base::format()}} to the string.
 By default, the values are left aligned, \emph{even numbers} (differently from \code{\link[base:format]{base::format()}}'s behavior).
-The upper case command (\code{Format}) applies right alignment. Options: "0", "zero", "right", "center".
+The upper case command (\code{Format}) applies right alignment. Options: "0", "zero", "left", "right", "center".
 Options "0" or "zero" fills the blanks with 0s: useful to format numbers. Option "right" right aligns,
-and "center" centers the strings.
+and "center" centers the strings. Default is left alignment.
 Ex: \verb{x = c(1, 12345); string_magic("left: \{format.0, q, C ? x\}, right: \{Format, q, C ? x\}")}
 leads to "left: '000001' and '12,345', right: '     1' and '12,345'".
 \item \%: applies \code{\link[base:sprintf]{base::sprintf()}} formatting. The syntax is 'arg'\% with arg an sprintf formatting,
@@ -466,6 +482,16 @@ are transformed into question marks. Options: "silent", "utf8". By default, if s
 a warning is prompted. Option "silent" disables the warning in case of failed conversion. The conversion
 is done with \code{\link[base:iconv]{base::iconv()}}, option "utf8" indicates that the source endocing is UTF-8, can be useful
 in some cases.
+\item round, r0 to r6: formats numbers by rounding at a given level. Options:  \code{0} to \code{9}, \code{int}, \code{nocomma}, \code{s0}-\code{s9}.
+Option \code{0} to \code{9} controls the number of digits to round at.
+Option \code{int} is whether to preserve integers from formattting.
+Option \code{nocomma} conrtols whether to drop the comma separating the thousands.
+\code{s0}-\code{s9} also keeps a given number of significant digits.
+\item signif, s0 to s6: formats numbers by displaying a certain number of significant digits. Options:  \code{0} to \code{9}, \code{int}, \code{nocomma}, \code{r0}-\code{r9}.
+Option \code{0} to \code{9} controls the number of significant digits to display.
+Option \code{int} is whether to preserve integers from formattting.
+Option \code{nocomma} conrtols whether to drop the comma separating the thousands.
+\code{r0}-\code{r9} also rounds at a given number of decimals.
 \item n: formats integers by adding a comma to separate thousands. Options: "letter", "upper", "0", "zero".
 The option "letter" writes the number in letters (large numbers keep their numeric format). The option
 "upper" is like the option "letter" but uppercases the first letter. Options "0" or "zero" left pads
@@ -500,7 +526,8 @@ The difference between 'n|s' and 'n||s' is that in the second case the strings
 will always be of maximum size \code{n}, while in the first case they can be of length \code{n + nchar(s)}.
 Ex: \code{string_magic("{4k ! long sentence}")} leads to "long",  \code{string_magic("{'4|..'k ! long sentence}") }
 leads to "long..", \code{string_magic("{'4||..'k ! long sentence}")} leads to "lo..".
-\item fill: fills the character strings up to a size. Options: "right", "center".
+\item fill, align (alias), width (alias): fills the character strings up to a size in order
+to fit a given width. Options: "left", "right", "center".
 Accepts arguments of the form \code{'n'} or \code{'n|s'}, with \code{n} a number and \code{s} a symbol.
 Default is left-alignment of the strings.
 Option "right" right aligns and "center" centers the strings. When using \code{'n|s'}, the symbol \code{s}
@@ -508,8 +535,8 @@ is used for the filling. By default if no argument is provided, the
 maximum size of the character string is used. See help for \code{\link[=string_fill]{string_fill()}} for more information.
 Ex.1: \code{string_magic("Numbers: {'5|0'fill.right, C ? c(1, 55)}")} leads to "Numbers: 00001 and 00055".
 \item paste, append: pastes some character to all elements of the string. This operation has no default.
-Options: "both", "right", "front", "back", "delete". By default, a string is pasted on the left.
-Option "right" pastes on the right and "both" pastes on both sides. Option "front" only
+Options: "left", "both", "right", "front", "back", "delete". By default, a string is pasted on the left.
+By default, it pastes on the left. Option "right" pastes on the right and "both" pastes on both sides. Option "front" only
 pastes on the first element while option "back" only pastes on the last element. Option "delete"
 first replaces all elements with the empty string.
 Example: \code{string_magic("6 = {'|'paste.both, ' + 'c ? -3:-1}")} leads to "6 = |-3| + |-2| + |-1|".
@@ -560,17 +587,18 @@ as letter but uppercases the first letter.
 By default, commas are added to separate thousands. Use uption "num" to preserve
 a regular numeric format.
 Example: \code{string_magic("Size = {len ? 1:5000}")} leads to "Size = 5,000".
-\item width: formats the string to fit a given width by cutting at word boundaries.
+\item swidth: stands for screen width. Formats the string to fit a given width
+by cutting at word boundaries and adding newlines appropriately.
 Accepts arguments of the form \code{'n'} or \code{'n|s'}, with \code{n} a number and \code{s} a string.
 An argument of the form \code{'n|s'} will add \code{s} at the beginning of each line. Further,
 by default a trailing white space is added to \code{s}; to remove this
 behavior, add an underscore at the end of it.
-The argument \code{n} is either
-an integer giving the target character width (minimum is 15), or it can be a fraction expressing the
+The argument \code{n} is either an integer giving the target character
+width (minimum is 15), or it can be a fraction expressing the
 target size as a fraction of the current screen. Finally it can be an expression that
 uses the variable \code{.sw} which will capture the value of the current screen width.
-Ex.1: \code{string_magic("{15 width ! this is a long sentence}")} leads to "this is a long\\nsentence".
-Ex.2: \code{string_magic("{15 width.#> ! this is a long sentence}")} leads to "#> this is a long\\n#> sentence".
+Ex.1: \code{string_magic("{15 swidth ! this is a long sentence}")} leads to "this is a long\\nsentence".
+Ex.2: \code{string_magic("{15 swidth.#> ! this is a long sentence}")} leads to "#> this is a long\\n#> sentence".
 \item difftime: displays a formatted time difference. Option "silent" does not report a warning if the
 operation fails. It accepts either objects of class \code{POSIXt} or \code{difftime}.
 Example: \verb{x = Sys.time() ; Sys.sleep(0.5) ; string_magic("Time: \{difftime ? x\}")} leads to something

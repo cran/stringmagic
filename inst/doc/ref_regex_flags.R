@@ -24,7 +24,7 @@ A poor, infirm, weak, and despis'd old man."
 # the ignore flag allows to retain words starting with the
 # upper cased letters
 # ex: getting words starting with the letter 'r' to 'z'
-cat_magic("{'ignore/\\b[r-z]\\w+'extract, c, 60 width ? unhappy}")
+cat_magic("{'ignore/\\b[r-z]\\w+'extract, c, 60 swidth ? unhappy}")
 
 ## -----------------------------------------------------------------------------
 x = "50 + 5 * 5 = 40"

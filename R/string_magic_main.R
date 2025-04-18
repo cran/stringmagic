@@ -302,20 +302,22 @@ save_user_fun = function(fun, alias, namespace){
 #' 
 #' @inheritParams string_magic
 #' 
-#' @param .end Character scalar, default is `""` (the empty string). This string 
-#' will be collated at the end of the message (a common alternative is `"\n"`).
+#' @param .end Character scalar, default is `""` (the empty string) for `cat_magic`, 
+#' and `"\n"` (a newline) for `message_magic`. 
+#' This string will be collated at the end of the message (a common alternative is `"\n"`).
 #' @param .width Can be 1) a positive integer, 2) a number in (0;1), 3) `FALSE` (default 
-#' for `cat_magic`), or 4) `NULL` (default for `message_magic`). It represents the target 
+#' for `cat_magic`), 4) `NULL` (default for `message_magic`), or 5) a one-sided formula. It represents the target 
 #' width of the message on the user console. Newlines will be added *between words* to fit the
 #' target width.
 #' 
 #' 1. positive integer: number of characters
 #' 2. number (0;1): fraction of the screen
 #' 3. `FALSE`: does not add newlines
-#' 4. `NULL`: the min between 120 characters and 90% of the screen width
+#' 4. `NULL`: the min between 100 characters and 90% of the screen width
+#' 5. one-sided formula: an expression in which you can use the special variable
+#' `.sw` which represents the current screen width
 #' 
-#' Note that you can use the special variable `.sw` to refer to the screen width. Hence the value
-#' `NULL` is equivalent to using `min(120, 0.9*.sw)`.
+#' Note that the value `NULL` is equivalent to using `~min(100, 0.9*.sw)`.
 #' @param .leader Character scalar, default is `TRUE`. Only used if argument `.width` is not `FALSE`. 
 #' Whether to add a leading character string right after the extra new lines.
 #' 
@@ -324,7 +326,7 @@ save_user_fun = function(fun, alias, namespace){
 #' with respect to `cat`/`message`. It's the ability to add newlines after words for 
 #' the message to fit a target width. This is controlled with the argument `.width`. This is 
 #' active by default for `message_magic` (default is `.width = NULL` which leads to the 
-#' minimum betwen 120 characters and 90% of the screen width).
+#' minimum betwen 100 characters and 90% of the screen width).
 #' 
 #' You can very easily change the default values with the alias generators `cat_magic_alias` and 
 #' `message_magic_alias`.
@@ -367,36 +369,41 @@ save_user_fun = function(fun, alias, namespace){
 #'           "    + this is a very long item that likely overflows", 
 #'          .width = 30, .sep = "\n")
 #' 
-#' #
-#' # define custom defaults
-#' #
-#' 
-#' # Unhappy about the default values? Create an alias!
-#' 
-#' # Here we change the defaults to mimic the printing of a column
-#' cat_column = cat_magic_alias(.sep = "\n", .end = "\n", .vectorize = TRUE, 
-#'                             .last = "fill.center, ' + 'paste.both")
-#'
-#' cat_column("code string_magic", "write the docs", "write the vignettes")
 #' 
 cat_magic = function(..., .sep = "", .end = "", .width = FALSE, .leader = "", 
-                     .envir = parent.frame(), 
-                     .vectorize = FALSE, .delim = c("{", "}"), .last = NULL, 
-                     .collapse = NULL, .trigger = TRUE, 
-                     .check = TRUE, .help = NULL, 
+                     .envir = parent.frame(), .delim = c("{", "}"), .last = NULL, 
+                     .trigger = TRUE, .check = TRUE, .help = NULL, 
                      .namespace = NULL){
   
   if(!isTRUE(.trigger)) return(invisible(NULL))
   
   set_pblm_hook()
-  txt = string_magic(..., .envir = .envir, .sep = .sep, .vectorize = .vectorize, 
-                     .delim = .delim, .last = .last, .collapse = .collapse,
-                     .check = .check, .help = .help,
-                     .namespace = .namespace)
-            
-  check_character(.end, scalar = TRUE)
   
-  # all this is needed to implement lazy default values with  yet to be evaluated expressions (.sw)
+  if(.check){
+    dots = check_set_dots(..., nofun = TRUE)
+    check_character(.end, scalar = TRUE)
+  } else {
+    dots = list(...)
+  }
+  
+  if(length(dots) == 0){
+    return(invisible(NULL))
+  }
+  
+  if(all(lengths(dots) == 1)){
+    txt = string_magic(..., .envir = .envir, .delim = .delim, .last = .last,
+                       .sep = .sep, .check = .check, .help = .help, .split = FALSE,
+                       .namespace = .namespace)
+  } else {
+    txt = string_vec(..., .envir = .envir, .delim = .delim, .last = .last,
+                     .check = .check, .help = .help, .split = FALSE,
+                     .namespace = .namespace)
+  }
+  
+  # all this is needed to implement lazy default values with yet to be evaluated expressions (.sw)
+  if(is.character(.width)){
+    .width = str2lang(.width)
+  }
   is_call = isTRUE(try(is.call(.width), silent = TRUE))
   .width = if(is_call) .width else substitute(.width)
   .width = check_set_width(.width)
@@ -410,6 +417,11 @@ cat_magic = function(..., .sep = "", .end = "", .width = FALSE, .leader = "",
   
   if(nchar(.end) > 0){
     txt = paste0(txt, .end)
+  }
+  
+  .width = check_set_width(.width)
+  if(is.finite(.width)){
+    txt = fit_screen(txt, .width, leader = .leader)
   }
 
   cat(txt)
@@ -419,37 +431,48 @@ cat_magic = function(..., .sep = "", .end = "", .width = FALSE, .leader = "",
 catma = cat_magic
 
 #' @describeIn cat_magic Display messages using interpolated strings
-message_magic = function(..., .sep = "", .end = "\n", .width = NULL, .leader = "", 
-                         .envir = parent.frame(), 
-                         .vectorize = FALSE, .delim = c("{", "}"), .last = NULL, 
-                         .collapse = NULL, .trigger = TRUE,
+message_magic = function(..., .sep = "", .end = "\n", .width = NULL, 
+                         .leader = "", .envir = parent.frame(), .delim = c("{", "}"), 
+                         .last = NULL, .trigger = TRUE,
                          .check = TRUE, .help = NULL, 
                          .namespace = NULL){
   
   if(!isTRUE(.trigger)) return(invisible(NULL))
   
   set_pblm_hook()
-  txt = string_magic(..., .envir = .envir, .sep = .sep, .vectorize = .vectorize, 
-                     .delim = .delim, .last = .last, .collapse = .collapse,
-                     .check = .check, .help = .help,
-                     .namespace = .namespace)
-
-
-  check_character(.end, scalar = TRUE)
   
-  is_call = isTRUE(try(is.call(.width), silent = TRUE))
-  .width = if(is_call) .width else substitute(.width)
-  .width = check_set_width(.width)
-  if(is.finite(.width)){
-    txt = fit_screen(txt, .width, leader = .leader)
+  if(.check){
+    dots = check_set_dots(..., nofun = TRUE)
+    check_character(.end, scalar = TRUE)
+  } else {
+    dots = list(...)
   }
   
+  if(length(dots) == 0){
+    return(invisible(NULL))
+  }
+  
+  if(all(lengths(dots) == 1)){
+    txt = string_magic(..., .envir = .envir, .delim = .delim, .last = .last,
+                       .sep = .sep, .check = .check, .help = .help, .split = FALSE,
+                       .namespace = .namespace)
+  } else {
+    txt = string_vec(..., .envir = .envir, .delim = .delim, .last = .last,
+                     .check = .check, .help = .help, .split = FALSE,
+                     .namespace = .namespace)
+  }
+    
   if(length(txt) > 1){
     txt = paste0(txt, collapse = .sep)
   }
   
   if(nchar(.end) > 0){
     txt = paste0(txt, .end)
+  }
+  
+  .width = check_set_width(.width)
+  if(is.finite(.width)){
+    txt = fit_screen(txt, .width, leader = .leader)
   }
 
   message(txt, appendLF = FALSE)
@@ -519,7 +542,8 @@ timer_magic = function(){
 
 
 #' @describeIn string_magic String interpolation with operation chaining
-string_magic = function(..., .envir = parent.frame(), .sep = "", .vectorize = FALSE, 
+string_magic = function(..., .envir = parent.frame(), .data = list(), 
+                        .sep = "", .vectorize = FALSE, 
                         .delim = c("{", "}"), .last = NULL, .post = NULL, .nest = FALSE,
                         .collapse = NULL, .invisible = FALSE, .default = NULL,
                         .trigger = TRUE, 
@@ -532,6 +556,12 @@ string_magic = function(..., .envir = parent.frame(), .sep = "", .vectorize = FA
     set_pblm_hook()
     
     if(!missing(.envir)) check_envir(.envir)
+    if(!missing(.data)){
+      if(!is.list(.data)){
+        stop("The argument `.data` must be a list or a data.frame.",
+             "PROBLEM: instead it is of class ", class(.data)[1], ".")
+      }
+    }
     if(!missing(.sep)) check_character(.sep, scalar = TRUE)
     if(!missing(.vectorize)) check_logical(.vectorize, scalar = TRUE)
     if(!missing(.nest)) check_logical(.nest, scalar = TRUE)
@@ -557,7 +587,8 @@ string_magic = function(..., .envir = parent.frame(), .sep = "", .vectorize = FA
     }
   } 
   
-  res = string_magic_internal(..., .delim = .delim, .envir = .envir, .sep = .sep,
+  res = string_magic_internal(..., .delim = .delim, 
+                              .envir = .envir, .data = .data, .sep = .sep,
                               .vectorize = .vectorize, .help = .help, .nest = .nest,
                               .collapse = .collapse, .is_root = TRUE, 
                               .namespace = .namespace, .default = .default,
@@ -570,8 +601,9 @@ string_magic = function(..., .envir = parent.frame(), .sep = "", .vectorize = FA
   
   if(!is.null(.post)){
     # .post must be a function
-    # we catch the arguments
-    res = check_set_eval_fun(.post, res, ...)
+    # => we **don't** catch the arguments (too error prone, and pretty useless TBH)
+    check_function(.post, argname = ".post")
+    res = .post(res)
   }
   
   if(!is.null(.class)){
@@ -586,7 +618,8 @@ string_magic = function(..., .envir = parent.frame(), .sep = "", .vectorize = FA
 }
 
 #' @describeIn string_magic A simpler version of `string_magic` without any error handling to save a few micro seconds
-.string_magic = function(..., .envir = parent.frame(), .sep = "", .vectorize = FALSE,
+.string_magic = function(..., .envir = parent.frame(), .data = list(), 
+                         .sep = "", .vectorize = FALSE,
                          .delim = c("{", "}"), .collapse = NULL, .last = NULL, .nest = FALSE,
                          .trigger = TRUE, .namespace = NULL){
   
@@ -596,7 +629,8 @@ string_magic = function(..., .envir = parent.frame(), .sep = "", .vectorize = FA
     .delim = strsplit(.delim, " ", fixed = TRUE)[[1]]
   }
 
-  string_magic_internal(..., .delim = .delim, .envir = .envir, 
+  string_magic_internal(..., .delim = .delim, 
+                        .envir = .envir, .data = .data,
                         .sep = .sep, .namespace = .namespace, .nest = .nest,
                         .vectorize = .vectorize, .is_root = TRUE, 
                         .collapse = .collapse,
@@ -648,6 +682,9 @@ string_magic_internal = function(..., .delim = c("{", "}"), .envir = parent.fram
     } else {
       .valid_operators = getOption("string_magic_operations_default")
     }
+    if(length(.data) > 0){
+      .data = unclass(.data)
+    }
   }
 
   if(...length() == 1){
@@ -663,7 +700,13 @@ string_magic_internal = function(..., .delim = c("{", "}"), .envir = parent.fram
                 "\nFIX: please provide at least one non-named argument.")
     }
     
-    x = as.character(..1)
+    if(.check){
+      x = as.character(..1)
+    } else {
+      x = check_expr(as.character(..1), 
+                     "In `string_magic`, the argument could not be evaluated.")
+    }
+    
     
     if(length(x) > 1){
       stop_hook("`string_magic` can only be applied to character scalars. ",
@@ -689,7 +732,7 @@ string_magic_internal = function(..., .delim = c("{", "}"), .envir = parent.fram
         }
         dots[is_var] = NULL      
       }
-    }    
+    }
     
     if(length(dots) == 0){
       stop_hook("`string_magic` requires at least one character scalar to work.",
@@ -1202,6 +1245,7 @@ string_magic_internal = function(..., .delim = c("{", "}"), .envir = parent.fram
   return(res)
 }
 
+ROUND_SIGNIF_OPS = c(paste0("r", 0:6), paste0("s", 0:6))
 
 sma_char2operator = function(x, .valid_operators){
 
@@ -1223,6 +1267,11 @@ sma_char2operator = function(x, .valid_operators){
   # we partially match operators if needed
   if(!op %in% .valid_operators){
     op = check_set_options(op, .valid_operators, case = TRUE, free = TRUE)
+    op_parsed$operator = op
+  } else if(op %in% ROUND_SIGNIF_OPS){
+    digits = as.numeric(substr(op, 2, 2))
+    op = if(substr(op, 1, 1) == "r") "round" else "signif"
+    op_parsed$options[[length(op_parsed$options) + 1]] = digits
     op_parsed$operator = op
   }
 
@@ -1302,6 +1351,24 @@ sma_char2operator = function(x, .valid_operators){
 sma_operators = function(x, op, options, argument, .check = FALSE, .envir = NULL, 
                          .data = list(), group_flag = 0, .delim = c("{", "}"),  
                          .user_funs = NULL, .valid_operators = NULL){
+  
+  
+  #
+  # step 1: retro compatibility ####
+  #
+  
+  
+  # now: >=1.2.0 operator width becomes similar to fill
+  # we need take care of not breaking existing code!!!!
+  # special case: width is like swidth (old behavior, < 1.2.0)
+  if(op == "width" && grepl("sw", argument)){
+    op = "swidth"
+  }
+  
+  #
+  # step 2: user functions ####
+  #
+  
 
   # group_flag:  0 nothing
   #                    1 keep track of conditional things
@@ -1329,6 +1396,11 @@ sma_operators = function(x, op, options, argument, .check = FALSE, .envir = NULL
     #   * allow users to redefine existing operations
     #   * check user defined version first
     #
+    
+    #
+    # step 3: built in functions ####
+    #
+    
     
     if(isTRUE(attr(fun, "simple_ops"))){
       res = apply_simple_operations(x, op, fun, .check, .envir,  .data,
@@ -1651,7 +1723,7 @@ sma_operators = function(x, op, options, argument, .check = FALSE, .envir = NULL
   } else if(op %in% c("format", "Format")){
     # Format, % ####
 
-    options = check_set_options(options, c("0", "zero", "right", "center"))
+    options = check_set_options(options, c("0", "zero", "left", "right", "center"))
 
     is_zero = any(options %in% c("0", "zero"))
     is_right = "right" %in% options || op == "Format" || is_zero
@@ -2064,7 +2136,7 @@ sma_operators = function(x, op, options, argument, .check = FALSE, .envir = NULL
       op = "paste"
     }
     
-    valid_options = c("both", "right")
+    valid_options = c("left", "both", "right")
     if(op == "paste"){
       valid_options = c(valid_options, "front", "back", "delete")
     }
@@ -2194,10 +2266,15 @@ sma_operators = function(x, op, options, argument, .check = FALSE, .envir = NULL
 
     # END: paste/insert
 
-  } else if(op %in% c("fill", "align")){
+  } else if(op %in% c("fill", "align", "width")){
     # fill, align ####
     
-    valid_options = c("right", "center")
+    #
+    # regular case
+    #
+    
+    # all are equivalent
+    valid_options = c("left", "right", "center")
     options = check_set_options(options, valid_options, op = op)
     
     info = extract_pipe(argument, op, double = FALSE, numeric = TRUE, mbt = FALSE)
@@ -2254,7 +2331,7 @@ sma_operators = function(x, op, options, argument, .check = FALSE, .envir = NULL
     }
     
   } else if(op == "unik"){
-    # unik ####
+    # unik, table ####
 
     if(!is.null(group_index) && group_flag == 2){
 
@@ -2276,6 +2353,177 @@ sma_operators = function(x, op, options, argument, .check = FALSE, .envir = NULL
 
     }
 
+  } else if(op == "table") {
+    
+    if(!is.null(group_index) && group_flag == 2){
+      stop_hook("The `table` operation is not implemented for groups.")
+    }
+    
+    # The default is decreasing frequency sort
+    options = check_set_options(options, c("sort", "dsort", "fsort", "dfsort", "nosort"))
+    
+    if(argument == ""){
+      argument = "{x} ({n ? n})"
+      
+    } else {
+      # we check the validity of the argument
+      vars = get_interpolated_vars(argument)
+      if(length(vars) == 0){
+        stop_hook("The operation `table` requires an argument with at least one of the variables `x` (value), `n` (frequency), or `s` (share) in curly braces.",
+                  "\nPROBLEM: no interpolated variable found in the argument {q?argument}",
+                  "\nEXAMPLE: sma(\"Freq. of months: \\{'\\{x} (\\{n})'table.nosort, enum ? month.name[airquality$Month]}.\")")
+      }
+      
+      pblm = setdiff(vars, c("x", "n", "s"))
+      if(length(pblm) > 0){
+        stop_hook("The operation `table` requires an argument with the variables `x` (value), `n` (frequency), and/or `s` (share) in curly braces (and only those variables).",
+                  "\nPROBLEM: the following invalid variable{$s, is} used {enum.bq ? pblm}.",
+                  "\nEXAMPLE: sma(\"Freq. of months: \\{'\\{x} (\\{n})'table.nosort, enum ? month.name[airquality$Month]}.\")")
+      }
+    }
+    
+    # We apply a SMA interpolation with the following variables:
+    # - x: the character value
+    # - n: the frequency
+    # - s: the share
+    
+    info = to_index(x, items = TRUE, items.simplify = TRUE)
+    
+    n_items = length(info$items)
+    x_tab = cpp_table(info$index, n_items)
+    
+    table_data = list(x = info$items, n = x_tab, s = x_tab / length(x))
+    
+    # NOTA: there can be no ties in x (by definition)
+    #       but ties can occur in frequencies
+    
+    my_order = NULL
+    if("sort" %in% options){
+      if("fsort" %in% options){
+        my_order = order(table_data$n, table_data$x)
+        
+      } else if("dfsort" %in% options){
+        my_order = order(-table_data$n, table_data$x)
+        
+      } else {
+        my_order = order(table_data$x)
+      }
+      
+    } else if("dsort" %in% options){
+      if("fsort" %in% options){
+        my_order = order(-table_data$n, table_data$x, decreasing = TRUE)
+        
+      } else if("dfsort" %in% options){
+        my_order = order(table_data$n, table_data$x, decreasing = TRUE)
+        
+      } else {
+        my_order = order(table_data$x, decreasing = TRUE)
+      }
+      
+    } else if("fsort" %in% options){
+      my_order = order(table_data$n)
+    } else if("nosort" %in% options){
+      # nothing
+    } else {
+      # the default
+      my_order = order(table_data$n, decreasing = TRUE)
+    }
+    
+    if(!is.null(my_order)){
+      table_data$x = table_data$x[my_order]
+      table_data$n = table_data$n[my_order]
+      table_data$s = table_data$s[my_order]
+    }
+    
+    res = string_magic_internal(argument, .delim = .delim, .envir = .envir,
+                                .data = table_data, .check = .check, 
+                                .user_funs = .user_funs, .valid_operators = .valid_operators)
+    
+    
+  } else if(op %in% c("round", "signif")){
+    #
+    # round, signif ####
+    #
+    
+    is_round = op == "round"
+    
+    digits_opt = grep("^\\d$", options, value = TRUE)
+    if(length(digits_opt) > 0){
+      digits = as.numeric(digits_opt)
+      options = setdiff(options, digits_opt)
+    } else {
+      digits = if(is_round) 0 else 1
+    }
+    
+    if(is_round){
+      n_round = digits
+      n_signif = 0
+      signif_info = grep("^s\\d", options, value = TRUE)
+      if(length(signif_info) > 0){
+        options = setdiff(options, signif_info)
+        n_signif = as.numeric(substr(signif_info[1], 2, 2))
+      }
+    } else {
+      n_signif = digits
+      n_round = 1
+      round_info = grep("^r\\d", options, value = TRUE)
+      if(length(round_info) > 0){
+        options = setdiff(options, round_info)
+        n_round = as.numeric(substr(round_info[1], 2, 2))
+      }
+    }
+    
+    options = check_set_options(options, c("int", "nocomma"))
+    
+    int_as_double = !"int" %in% options
+    
+    info_pipe = extract_pipe(argument)
+    if(info_pipe$is_pipe){
+      prefix = info_pipe$value
+      suffix = info_pipe$extra
+    } else {
+      prefix = NULL
+      suffix = info_pipe$value
+    }
+    
+    if("nocomma" %in% options){
+      big_mark = ""
+    } else {
+      big_mark = ","
+    }
+    
+    if(!is.numeric(x)){
+      if(!is.atomic(x)){
+        stop_hook("The operation {bq?op} can only be applied on atomic vectors. ",
+                  "\nPROBLEM: the value is of class {enum ? class(x)}.")
+      }
+      
+      x_num = suppressWarnings(as.numeric(x))
+      
+      if(anyNA(x_num)){
+        id_ok = which(!is.na(x_num))
+        res = as.character(x)
+        res[id_ok] = cpp_format_numeric(x_num[id_ok], R_digits = n_round, R_signif = n_signif, 
+                                        R_int_as_double = int_as_double, 
+                                        minus_sign = "-", decimal = ".", big_mark = big_mark, 
+                                        small_mark = "", prefix = prefix, suffix = suffix)
+      } else {
+        res = cpp_format_numeric(x_num, R_digits = n_round, R_signif = n_signif, 
+                                 R_int_as_double = int_as_double, 
+                                 minus_sign = "-", decimal = ".", big_mark = big_mark, 
+                                 small_mark = "", prefix = prefix, suffix = suffix)
+      }
+      
+    } else {
+      res = cpp_format_numeric(x, R_digits = n_round, R_signif = n_signif, 
+                               R_int_as_double = int_as_double, 
+                               minus_sign = "-", decimal = ".", big_mark = big_mark, 
+                               small_mark = "", prefix = prefix, suffix = suffix)
+    }
+    
+    
+    
+    
   } else if(op %in% c("nth", "Nth", "ntimes", "Ntimes", "n", "N", "len", "Len")){
     #
     # nth, ntimes, n, len ####
@@ -2382,7 +2630,7 @@ sma_operators = function(x, op, options, argument, .check = FALSE, .envir = NULL
     if("upper" %in% options){
       res = gsub("^(.)", "\\U\\1", res, perl = TRUE)
     }
-  } else if(op == "width"){
+  } else if(op == "swidth"){
     # width, difftime ####
     
     sw = getOption("width")
@@ -3089,9 +3337,10 @@ sma_ifelse = function(operators, xi, xi_val, .envir, .data, .delim, .check,
        if(true_long){
         res = true
         if(false_long){
-          res[xi] = false[xi]
+          index_false = which(!xi)
+          res[index_false] = false[index_false]
         } else {
-          res[xi] = false
+          res[!xi] = false
         }
        } else {
         res = false
@@ -3240,7 +3489,15 @@ setup_operations = function(){
   options("string_magic_operations_v1.0.0" = sort(OPERATORS))
   
   # dp: v1.1.0
-  OPERATORS = c(OPERATORS, "dp", "deparse")
+  # swidth: v1.1.3
+  # table, round, r0-r5, signif, s0-s5: v1.1.3
+  OPERATORS = c(OPERATORS, 
+                # v1.1.0
+                "dp", "deparse", 
+                # v1.1.3
+                "swidth", "table", 
+                "round", paste0("r", 0:6), 
+                "signif", paste0("s", 0:6))
   
   options("string_magic_operations_default" = sort(OPERATORS))
   

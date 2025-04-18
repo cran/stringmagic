@@ -5,6 +5,147 @@
 #----------------------------------------------#
 
 
+####
+#### use-level ####
+####
+
+# I am exposing a tool that can be useful for developpers (well... me)
+# => finding the variables in a sma call
+# x = "bon{jour} {upper!les} {firstchar?gens} {ok} {s, enum!ou bien {haha}} {&is_ok;TRUE;{.}{damn}}"
+
+#' Lists the expressions used for interpolation in a `string_magic` call
+#' 
+#' Tool intended for development: use `get_interpolated_expr` to obtain the list of expressions
+#' which will be interpolated in a [string_magic()] call. 
+#' The function `get_interpolated_vars` provides the variables instead.
+#' 
+#' @param x A character scalar for which the variables will be recovered. 
+#' For example `x = "Hi {person}"` will  return `"person"` 
+#' (the variable that will be interpolated).
+#' @param parse Logical scalar, default is `FALSE`. If `TRUE`, the result is a list of R
+#' expressions. If `FALSE` (default), the result is a character vector of expressions.
+#' @param delim Character vector of length 1 or 2. Default is `c("{", "}")`. Defines 
+#' the opening and the closing delimiters for interpolation. 
+#' 
+#' If of length 1, it must be of the form: 1) the opening delimiter, 
+#' 2) a single space, 3) the closing delimiter. Ex: `".[ ]"` is equivalent to `c(".[", "]")`.
+#' The default value is equivalent to `"{ }"`.
+#' 
+#' @details 
+#' Note that this function captures even deeply nested interpolations.
+#' 
+#' @return 
+#' If the argument `parse = FALSE`, the default, then this function returns a 
+#' character vector containing all the expressions that will be interpolated. 
+#' This vector can be empty if there is no interpolation. 
+#' 
+#' If the argument `parse = TRUE`, then a list is returned, containing the R expressions.
+#' 
+#' The function `get_interpolated_vars` always return a character vector.
+#' 
+#' @inherit string_clean seealso
+#' 
+#' @examples 
+#' 
+#' # let's create a simple interpolation
+#' x = c("Ken", "Barbie")
+#' sma_expr = "{' loves 'c ? x}. But does {' love 'c ? rev(x)}?"
+#' string_magic(sma_expr)
+#' 
+#' # We recover the two expressions
+#' (char = get_interpolated_expr(sma_expr))
+#' 
+#' # same with parsing
+#' (expr = get_interpolated_expr(sma_expr, parse = TRUE))
+#' 
+#' # see the difference
+#' eval(char[[1]])
+#' eval(expr[[1]])
+#' 
+#' # and only the variables:
+#' get_interpolated_vars(sma_expr)
+#' 
+get_interpolated_expr = function(x, parse = FALSE, delim = c("{", "}")){
+  
+  check_character(x, scalar = TRUE, mbt = TRUE)
+  delim = check_set_delimiters(delim)
+  check_logical(parse, scalar = TRUE)
+  
+  res = get_expr_internal(x, delim)
+  cpp_trimws_in_place(res)  
+  
+  if(parse){
+    n_res = length(res)
+    res_list = vector("list", n_res)
+    for(i in seq_len(n_res)){
+      res_list[[i]] = str2lang(res[i])
+    }
+    
+    res = res_list
+  }
+  
+  res
+}
+
+#' @describeIn get_interpolated_expr Obtain the variables used in `string_magic()` interpolations
+get_interpolated_vars = function(x, delim = c("{", "}")){
+  
+  check_character(x, scalar = TRUE, mbt = TRUE)
+  delim = check_set_delimiters(delim)
+  
+  expr_all = get_expr_internal(x, delim)
+  
+  expr_all = unique(expr_all)
+  n_expr = length(expr_all)
+  
+  if(n_expr == 0){
+    return(character(0))
+  }
+  
+  vars_list = vector("list", n_expr)
+  for(i in seq_len(n_expr)){
+    vars_list[[i]] = all.vars(str2lang(expr_all[i]))
+  }
+  
+  unique(unlist(vars_list))
+}
+
+
+get_expr_internal = function(x, delim){
+  
+  vars = character()
+  
+  # This is not so straigtforward because of the many cases
+  x_parsed = cpp_string_magic_parser(x, delim)
+  for(elem in x_parsed){
+    if(length(elem) == 1){
+      next
+    }
+    
+    op_slot = elem[[1]]
+    var_slot = elem[[2]]
+    
+    if(var_slot == ""){
+      if(op_slot[1] %in% c("&", "&&")){
+        for(arg in op_slot[-1]){
+          vars = c(vars, get_expr_internal(arg, delim))
+          vars = setdiff(vars, ".")
+        }
+      }
+      next
+    }
+    
+    if(identical(tail(op_slot, 1), "!")){
+      vars = c(vars, get_expr_internal(var_slot, delim))
+      next
+    }
+    
+    vars = c(vars, var_slot)
+  }
+  
+  vars
+}
+
 
 ####
 #### string manipulation ####
@@ -747,6 +888,11 @@ extract_first_variable = function(expr){
     return(NULL)
   }
   
+  # Needed to fix ensure compatibility with old R versions
+  if(is.expression(expr)){
+    expr = expr[[1]]
+  }
+  
   if(length(expr) == 1){
     return(expr)
   }
@@ -912,7 +1058,8 @@ eval_dt = function(call, data = list(), envir){
 
 # substitute to sprintf which does not handle char length properly
 # slower but safer
-simple_string_fill = function(x, n = NULL, symbol = " ", right = FALSE, center = FALSE){
+simple_string_fill = function(x, n = NULL, symbol = " ", right = FALSE, 
+                              center = FALSE, center.right = TRUE){
   
   x_nc = nchar(x)
   if(is.null(n)){
@@ -930,7 +1077,7 @@ simple_string_fill = function(x, n = NULL, symbol = " ", right = FALSE, center =
     extra = substr(rep(pattern, length(x_add)), 1, n - x_nc[i_add])
     if(center){
       nc_extra = nchar(extra)
-      mid = floor(nc_extra / 2)
+      mid = if(center.right) ceiling(nc_extra / 2) else floor(nc_extra / 2)
       extra_left = substr(extra, 1, mid)
       extra_right = substr(extra, mid + 1, nc_extra)
       x[i_add] = paste0(extra_left, x_add, extra_right)
@@ -1082,51 +1229,51 @@ setNames = function(x, nm){
 }
 
 fix_pkgwdown_path = function(){
-    # https://github.com/r-lib/pkgdown/issues/1218
-    # just because I use google drive... it seems pkgdown cannot convert to relative path...
+  # https://github.com/r-lib/pkgdown/issues/1218
+  # just because I use google drive... it seems pkgdown cannot convert to relative path...
 
-    # This is to ensure it only works for me
-    if(!is_string_magic_root()) return(NULL)
-    # we check we're in the right directory (otherwise there can be prblms with Rmakdown)
-    if(!isTRUE(file.exists("R/string_magic_main.R"))) return(NULL)
+  # This is to ensure it only works for me
+  if(!is_string_magic_root()) return(NULL)
+  # we check we're in the right directory (otherwise there can be prblms with Rmakdown)
+  if(!isTRUE(file.exists("R/string_magic_main.R"))) return(NULL)
 
-    all_files = list.files("docs/articles/", full.names = TRUE, pattern = "html$")
+  all_files = list.files("docs/articles/", full.names = TRUE, pattern = "html$")
 
-    for(f in all_files){
-        my_file = file(f, "r", encoding = "UTF-8")
-        text = readLines(f)
-        close(my_file)
-        if(any(grepl("../../../", text, fixed = TRUE))){
-            # We embed the images directly: safer
+  for(f in all_files){
+    my_file = file(f, "r", encoding = "UTF-8")
+    text = readLines(f)
+    close(my_file)
+    if(any(grepl("../../../", text, fixed = TRUE))){
+      # We embed the images directly: safer
 
-            # A) we get the path
-            # B) we transform to URI
-            # C) we replace the line
+      # A) we get the path
+      # B) we transform to URI
+      # C) we replace the line
 
-            pat = "<img.+\\.\\./.+/stringmagic/.+/images/"
-            qui = which(grepl(pat, text))
-            for(i in qui){
-                # ex: line = "<img src = \"../../../Google drive/stringmagic/stringmagic/vignettes/images/etable/etable_tex_2021-12-02_1.05477838.png\">"
-                line = text[i]
-                line_split = strsplit(line, "src *= *\"")[[1]]
-                path = gsub("\".*", "", line_split[2])
-                # ROOT is always stringmagic
-                path = gsub(".+stringmagic/", "", path)
-                path = gsub("^articles", "vignettes", path)
+      pat = "<img.+\\.\\./.+/stringmagic/.+/images/"
+      qui = which(grepl(pat, text))
+      for(i in qui){
+        # ex: line = "<img src = \"../../../Google drive/stringmagic/stringmagic/vignettes/images/etable/etable_tex_2021-12-02_1.05477838.png\">"
+        line = text[i]
+        line_split = strsplit(line, "src *= *\"")[[1]]
+        path = gsub("\".*", "", line_split[2])
+        # ROOT is always stringmagic
+        path = gsub(".+stringmagic/", "", path)
+        path = gsub("^articles", "vignettes", path)
 
-                URI = knitr::image_uri(path)
+        URI = knitr::image_uri(path)
 
-                rest = gsub("^[^\"]+\"", "", line_split[2])
-                new_line = .sma('{line_split[1]} src = "{URI}"{rest}')
+        rest = gsub("^[^\"]+\"", "", line_split[2])
+        new_line = .sma('{line_split[1]} src = "{URI}"{rest}')
 
-                text[i] = new_line
-            }
+        text[i] = new_line
+      }
 
-            my_file = file(f, "w", encoding = "UTF-8")
-            writeLines(text, f)
-            close(my_file)
-        }
+      my_file = file(f, "w", encoding = "UTF-8")
+      writeLines(text, f)
+      close(my_file)
     }
+  }
 
 }
 

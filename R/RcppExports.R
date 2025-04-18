@@ -37,6 +37,22 @@ cpp_parse_regex_pattern <- function(Rstr, parse_flags, parse_logical) {
     .Call(`_stringmagic_cpp_parse_regex_pattern`, Rstr, parse_flags, parse_logical)
 }
 
+cpp_create_pos <- function(index) {
+    .Call(`_stringmagic_cpp_create_pos`, index)
+}
+
+cpp_table <- function(index, n_items) {
+    .Call(`_stringmagic_cpp_table`, index, n_items)
+}
+
+cpp_format_numeric <- function(R_x, R_digits, R_signif, R_int_as_double, minus_sign, decimal, big_mark, small_mark, prefix, suffix) {
+    .Call(`_stringmagic_cpp_format_numeric`, R_x, R_digits, R_signif, R_int_as_double, minus_sign, decimal, big_mark, small_mark, prefix, suffix)
+}
+
+cpp_split_newlines <- function(x) {
+    .Call(`_stringmagic_cpp_split_newlines`, x)
+}
+
 cpp_string_magic_parser <- function(Rstr, Rdelimiters, only_last_parsed_section = FALSE) {
     .Call(`_stringmagic_cpp_string_magic_parser`, Rstr, Rdelimiters, only_last_parsed_section)
 }
@@ -65,15 +81,7 @@ cpp_find_closing_problem <- function(Rstr, Rdelimiters) {
     .Call(`_stringmagic_cpp_find_closing_problem`, Rstr, Rdelimiters)
 }
 
-cpp_to_integer <- function(x) {
-    .Call(`_stringmagic_cpp_to_integer`, x)
-}
-
-cpp_combine_clusters <- function(cluster_list, index) {
-    .Call(`_stringmagic_cpp_combine_clusters`, cluster_list, index)
-}
-
-cpp_create_pos <- function(index) {
-    .Call(`_stringmagic_cpp_create_pos`, index)
+cpp_to_index <- function(x) {
+    .Call(`_stringmagic_cpp_to_index`, x)
 }
 

@@ -591,7 +591,7 @@ txt = string_magic("{fill.right, q, C ? x}")
 test(txt, "'             bon' and 'bonjour les gens'")
 
 txt = string_magic("{fill.center, q, C ? x}")
-test(txt, "'      bon       ' and 'bonjour les gens'")
+test(txt, "'       bon      ' and 'bonjour les gens'")
 
 x = c(5, 15)
 txt = string_magic("{3 fill.right, q, C ? x}")
@@ -633,6 +633,55 @@ test(string_magic("{unik ? x}"), 1:3)
 x = c("11211125564454", "aggafsgaffasg")
 txt = string_magic("{''S, ~(unik, ''c), ' ; 'c ? x}")
 test(txt, "12564 ; agfs")
+
+#
+# table ####
+#
+
+x = strsplit("aggafsggaffasg", "")[[1]]
+
+# default
+txt = sma("letters: {table, enum ? x}.")
+test(txt, "letters: g (5), a (4), f (3) and s (2).")
+
+txt = sma("letters: {table.sort, enum ? x}.")
+test(txt, "letters: a (4), f (3), g (5) and s (2).")
+
+txt = sma("letters: {table.dsort, enum ? x}.")
+test(txt, "letters: s (2), g (5), f (3) and a (4).")
+
+txt = sma("letters: {table.fsort, enum ? x}.")
+test(txt, "letters: s (2), f (3), a (4) and g (5).")
+
+txt = sma("letters: {table.nosort, enum ? x}.")
+test(txt, "letters: a (4), g (5), f (3) and s (2).")
+
+# with argument
+txt = sma("letters: {'{q ? x} {round(s * 100)}%'table, enum ? x}.")
+test(txt, "letters: 'g' 36%, 'a' 29%, 'f' 21% and 's' 14%.")
+
+txt = sma("letters: {'{x}: {n}'table.sort, ', 'c ? x}.")
+test(txt, "letters: a: 4, f: 3, g: 5, s: 2.")
+
+# error
+test(sma("letters: {'x = n'table, ', 'c ? x}."), "no interpolated", "err")
+
+test(sma("letters: {'{zz}'table, ', 'c ? x}."), "following invalid", "err")
+
+# double sort
+x = sample(stsplit("aacceebbbuuu", ""))
+
+txt = string_ops(x, "table.dfsort.sort, ', 'c")
+test(txt, "b (3), u (3), a (2), c (2), e (2)")
+
+txt = string_ops(x, "table.fsort.sort, ', 'c")
+test(txt, "a (2), c (2), e (2), b (3), u (3)")
+
+txt = string_ops(x, "table.dfsort.dsort, ', 'c")
+test(txt, "u (3), b (3), e (2), c (2), a (2)")
+
+txt = string_ops(x, "table.fsort.dsort, ', 'c")
+test(txt, "e (2), c (2), a (2), u (3), b (3)")
 
 #
 # nth ####
@@ -708,7 +757,7 @@ test(num, c(3, 2, 4))
 
 
 x = "Rome, l'unique objet de mon ressentiment, Rome a qui vient ton bras d'immoler mon amant"
-txt = string_magic("Voici le texte a apprendre:\n{'40|>'width ? x}.")
+txt = string_magic("Voici le texte a apprendre:\n{'40|>'swidth ? x}.")
 test(txt, c("Voici le texte a apprendre:\n> Rome, l'unique objet de mon\n> ressentiment, Rome a qui vient ton\n> bras d'immoler mon amant."))
 
 #
@@ -848,7 +897,7 @@ x = c(15, 550)
 txt = string_magic("The values are{& length(x) < 5 ; ': {C ? .}' ; ' too many'}.")
 test(txt, "The values are: 15 and 550.")
 
-data = data.frame(x = x)
+data = data.frame(x = x, stringsAsFactors = FALSE)
 txt = string_magic("The values are{& length(data$x) < 5 ; ': {C ? .}' ; ' too many'}.")
 test(txt, "The values are: 15 and 550.")
 
@@ -864,8 +913,8 @@ txt = string_magic("{C ! {&&x %% 2 == 1;{y}}}")
 test(txt, "a, 2 and c")
 
 z = tail(letters, 3)
-txt = string_magic("{C ! {&x %% 2 == 1; {y} ; {bq?z}}}")
-test(txt, "`x`,  b and `z`")
+txt = string_magic("{C ! {&x %% 2 == 1 ; {y} ; {bq?z}}}")
+test(txt, "a, `y` and c")
 
 #
 # if ####

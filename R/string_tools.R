@@ -112,7 +112,7 @@ string_ops = function(x, ..., op = NULL, pre_unik = NULL, namespace = NULL, envi
   }
 
   if(pre_unik){
-    x_int = to_integer(x)
+    x_int = to_index(x)
     x_small = x[!duplicated(x_int)]
 
     res_small = string_ops(x_small, op = all_ops, pre_unik = FALSE, 
@@ -909,12 +909,16 @@ string_split2df = function(x, data = NULL, split = NULL, id = NULL, add.pos = FA
 
       id[[id_name]] = val
     }
+    
+    if(!is.character(x)){
+      x = as.character(x)
+    }
 
     x_name = deparse_short(fml[[2]])
     id_names = names(id)
 
   } else {
-    check_character(x)
+    check_set_character(x)
     x_name = "x"
   }
 
@@ -955,6 +959,7 @@ string_split2df = function(x, data = NULL, split = NULL, id = NULL, add.pos = FA
       }
 
       id_names = deparse_short(mc$id)
+      id = list(id)
     }
   }
 
@@ -963,7 +968,7 @@ string_split2df = function(x, data = NULL, split = NULL, id = NULL, add.pos = FA
   if(!missnull(id)){
     add.id = TRUE
     id_raw = id
-    id = to_integer(id)
+    id = to_index(list = id)
 
     if(id_unik && max(id) != length(id)){
       message("The identifiers are not unique, you will not be able to reconstruct the data using only them.")
@@ -1098,6 +1103,7 @@ paste_conditional = function(x, id, sep = " ", names = TRUE, sort = TRUE){
         stopi("The argument `id` must be of the same length as `x`.",
               "\nPROBLEM: `x` is {len?x} vs `id` is {len?id}.")
       }
+      id = list(id)
     } else if(is.list(id)){
       n_id_all = lengths(id)
       if(any(n_id_all != n_x)){
@@ -1140,7 +1146,7 @@ paste_conditional = function(x, id, sep = " ", names = TRUE, sort = TRUE){
   }
   
   id_raw = id
-  id = to_integer(id, sort)
+  id = to_index(list = id, sorted = sort)
   
   # obs_first: used in names
   obs_first = which(!duplicated(id))
@@ -1576,12 +1582,7 @@ string_replace = function(x, pattern, replacement = "", pipe = " => ", ignore.ca
 #' see `.delim`. Named arguments are used in priority for variable substitution,
 #' otherwise the value of the variables to be interpolated are fetched in the calling environment 
 #' (see argument `.envir`).
-#' 
-#' Note, importantly, that interpolation and comma splitting are performed on "natural" vectors only.
-#' That is: `string_vec("x{1:5}")` will lead to a vector of length 5 ("x1" to "x5"), while `z = "x{1:5}"`
-#' followed by `string_vec(z)` leads to a vector of length 1: `"x{1:5}"`. To change this behavior and 
-#' obtain equivalent results, use `.protect.vars = FALSE`.
-#' @param .protect.vars Logical scalar, default is `TRUE`. If `TRUE`, then only
+#' @param .protect.vars Logical scalar, default is `FALSE`. If `TRUE`, then only
 #' arguments equal to a "natural" character scalar are comma-split and interpolated, 
 #' other arguments are not touched. Ex: `string_vec("x{1:5}")` will lead to a vector of 
 #' length 5 ("x1" to "x5"), while `z = "x{1:5}"` followed by `string_vec(z)` leads 
@@ -1591,7 +1592,7 @@ string_replace = function(x, pattern, replacement = "", pipe = " => ", ignore.ca
 #' the character vectors are split with respect to commas (default). If `FALSE`, no 
 #' splitting is performed. If a character symbol, the string vector will be split
 #' according to this symbol. Note that any space after the symbol (including tabs and 
-#' newlines) is discarded.
+#' newlines) is discarded. You can escape the splitting symbol with a backslash right before it.
 #' 
 #' Ex: by default `string_vec("hi, there")` leads to the vector `c("hi", "there")`.
 #' @param .sep Character scalar or `NULL` (default). If not `NULL`, the function
@@ -1646,8 +1647,9 @@ string_replace = function(x, pattern, replacement = "", pipe = " => ", ignore.ca
 #' By default character values containing commas are split with respect to the commas
 #' to create vectors. To change this behavior, see the argument `.split`.
 #' 
-#' The default of the argument `.protect.vars` is `FALSE` so as to avoid unwanted 
-#' comma-splitting and interpolations. The main use case of this function is
+#' The default of the argument `.protect.vars` is `FALSE`. To avoid unwanted 
+#' comma-splitting and interpolations on variables, set it to `TRUE`. 
+#' The main use case of this function is
 #' the creation of small string vectors, which can be written directly at
 #' function call. 
 #' 
@@ -1673,10 +1675,11 @@ string_replace = function(x, pattern, replacement = "", pipe = " => ", ignore.ca
 #' 
 #' # variable protection
 #' x = "x{1:5}"
+#' # without protection (default) => interpolation takes place
 #' string_vec(x, "y{1:2}")
 #' 
-#' # without protection => interpolation takes place
-#' string_vec(x, "y{1:2}", .protect.vars = FALSE)
+#' # with protection => no interpolation for x
+#' string_vec(x, "y{1:2}", .protect.vars = TRUE)
 #' 
 #' # removing comma splitting
 #' string_vec("Hi, said Charles.", "Hi, said {girl}.", girl = "Julia", .split = FALSE)
@@ -1701,25 +1704,26 @@ string_replace = function(x, pattern, replacement = "", pipe = " => ", ignore.ca
 string_vec = function(..., .cmat = FALSE, .nmat = FALSE, .df = FALSE,
                    .df.convert = TRUE,
                    .delim = c("{", "}"), .envir = parent.frame(), 
-                   .split = TRUE, .protect.vars = TRUE, .sep = NULL, 
-                   .last = NULL,
+                   .split = TRUE, .protect.vars = FALSE, .sep = NULL, 
+                   .last = NULL, .check = TRUE, .help = NULL,
                    .collapse = NULL, .namespace = NULL){
   
   # checks
-  set_pblm_hook()  
-  .delim = check_set_delimiters(.delim)
-  check_character(.sep, scalar = TRUE, null = TRUE)
-  check_character(.collapse, scalar = TRUE, null = TRUE)
-  check_character(.last, scalar = TRUE, null = TRUE)
-  .split = check_set_split(.split)
+  set_pblm_hook()
+  if(.check){
+    .delim = check_set_delimiters(.delim)
+    check_character(.sep, scalar = TRUE, null = TRUE)
+    check_character(.collapse, scalar = TRUE, null = TRUE)
+    check_character(.last, scalar = TRUE, null = TRUE)
+    .split = check_set_split(.split)
+    check_logical(.protect.vars, scalar = TRUE)
+    check_envir(.envir)
+    # checking the dots + setting up the data
+    dots = check_set_dots(..., mbt = TRUE, nofun = TRUE)
+  } else {
+    dots = list(...)
+  }
   do_mat = check_set_mat(.cmat, .nmat, .df)
-  
-  check_logical(.protect.vars, scalar = TRUE)
-  
-  check_envir(.envir)
-  
-  # checking the dots + setting up the data
-  dots = check_set_dots(..., mbt = TRUE, nofun = TRUE)
   
   # we check if some variables were passed in the arguments
   .data = list()
@@ -1764,8 +1768,9 @@ string_vec = function(..., .cmat = FALSE, .nmat = FALSE, .df = FALSE,
     if(!true_character(di)){
       di = as.character(di)
     }
+
     if(length(di) == 1 && is_to_split[i]){
-      
+    
       if(isFALSE(.split)){
         di_expanded = di
       } else {
@@ -1781,9 +1786,10 @@ string_vec = function(..., .cmat = FALSE, .nmat = FALSE, .df = FALSE,
         for(j in 1:n_di_xpd){
           if(is_open[j]){
             all_elements[[j]] = string_magic_internal(di_expanded[j], .delim = .delim, 
-                                                  .envir = .envir, .is_root = TRUE,
-                                                  .data = .data, .check = TRUE, 
-                                                  .namespace = .namespace)  
+                                                      .envir = .envir, .is_root = TRUE,
+                                                      .data = .data, .check = .check, 
+                                                      .help = .help,
+                                                      .namespace = .namespace)  
           } else {
             all_elements[[j]] = di_expanded[j]
           }        
@@ -1803,8 +1809,8 @@ string_vec = function(..., .cmat = FALSE, .nmat = FALSE, .df = FALSE,
       stopi("The arguments `.sep` or `.collapse` are incompatible with the arguments ",
             "`.cmat` or `.nmat`. Please remove some of these arguments.")
     }
-    res_list$.sep = .sep
-    res_list$.collapse = .collapse
+    res_list$sep = .sep
+    res_list$collapse = .collapse
     res = do.call(base::paste, res_list)
   } else {
     res = do.call(base::c, res_list)
@@ -1913,6 +1919,10 @@ string_vec = function(..., .cmat = FALSE, .nmat = FALSE, .df = FALSE,
 #' done from the left, leading to right-alignment.
 #' @param center Logical scalar, default is `FALSE`. If `TRUE`, then the filling of the string will
 #' be balanced so as to center the strings.
+#' @param center.right Logical scalar, default is `TRUE`. Only used when `center = TRUE`, 
+#' ignored otherwise. If `TRUE`, then when the width is odd and the number of characters of the 
+#' string is even (or vice versa), the text is centered with one character on the right. 
+#' If `FALSE`, this is one character on the left.
 #' @param na Character scalar or `NA`. Default is "NA" (a character string!). What happens to NAs: by default 
 #' they are replaced by the character string "NA".
 #' 
@@ -1953,7 +1963,8 @@ string_vec = function(..., .cmat = FALSE, .nmat = FALSE, .df = FALSE,
 #' string_fill(x, na = "(missing)")
 #' 
 #' 
-string_fill = function(x = "", n = NULL, symbol = " ", right = FALSE, center = FALSE, na = "NA"){
+string_fill = function(x = "", n = NULL, symbol = " ", right = FALSE, 
+                       center = FALSE, center.right = TRUE, na = "NA"){
   # Character vectors starting with " " are not well taken care of
 
   x = check_set_character(x, l0 = TRUE)
@@ -1985,7 +1996,8 @@ string_fill = function(x = "", n = NULL, symbol = " ", right = FALSE, center = F
     return(x)
   }
   
-  x_new = simple_string_fill(x[qui], n, symbol, right = right, center = center)
+  x_new = simple_string_fill(x[qui], n, symbol, right = right, 
+                             center = center, center.right = center.right)
 
   res = x
   res[qui] = x_new
@@ -2311,88 +2323,6 @@ format_pattern = function(pattern, fixed, word, ignore){
   pattern
 }
 
-to_integer = function(x, sort = FALSE){
-  # x: vector or a list of vectors
-
-  if(!is.list(x) && !is.atomic(x)){
-    stop("Argument `x` must be either a list or a vector.")
-  }
-
-  if(!is.list(x)){
-    id = to_integer_single(x)
-  } else {
-    Q = length(x)
-
-    if(Q == 1){
-      id = to_integer_single(x[[1]])
-    } else {
-
-      x_int_all = list()
-      g_all = numeric(Q)
-      for(i in seq_along(x)){
-        id_i = to_integer_single(x[[i]])
-        x_int_all[[i]] = id_i
-        g_all[i] = max(id_i)
-      }
-
-      # Then we combine
-      power = floor(1 + log10(g_all))
-
-      is_large = sum(power) > 14
-      if(is_large){
-        order_index = do.call(order, x_int_all)
-        index = cpp_combine_clusters(x_int_all, order_index)
-      } else {
-        # quicker, but limited by the precision of doubles
-        index = x_int_all[[1]]
-        for(q in 2:Q){
-          index = index + x_int_all[[q]] * 10 ** sum(power[1:(q-1)])
-        }
-      }
-
-      id = cpp_to_integer(index)
-
-    }
-  }
-  
-  if(sort){
-    # example:
-    # x = c(5, 5, 8, 8, 1, 4)
-    # x_first = c(5, 8, 1, 4)
-    # id_first = c(1, 2, 3, 4)
-    # id_all = c(1, 1, 2, 2, 3, 4) 
-    
-    obs_first = which(!duplicated(id))
-    
-    if(is.atomic(x)){
-      x_list = list(x[obs_first])
-    } else {
-      x_list = unclass(x)
-      for(i in 1:length(x)){
-        x_list[[i]] = x_list[[i]][obs_first]
-      }
-    }
-    
-    new_order = do.call(base::order, x_list)
-    order_new_order = order(new_order)
-    id = order_new_order[id]
-  }
-
-  return(id)
-}
-
-
-to_integer_single = function(x){
-
-  if(!is.numeric(x) && !is.character(x) && !is.factor(x)){
-    # we're super conservative
-    # otherwise, there can be error when underlying types or "wrongly" integer
-    x = as.character(x)
-  }
-
-  cpp_to_integer(x)
-}
-
 
 ####
 #### Aliases ####
@@ -2400,16 +2330,16 @@ to_integer_single = function(x){
 
 
 #' @describeIn string_ops Alias to `string_ops`
-st_ops = string_ops
+stops = string_ops
 
 #' @describeIn string_is Alias to `string_is`
-st_is = string_is
+stis = string_is
 
 #' @describeIn string_is Alias to `string_any`
-st_any = string_any
+stany = string_any
 
 #' @describeIn string_is Alias to `string_all`
-st_all = string_all
+stall = string_all
 
 #' @describeIn string_is Alias to `string_which`
 stwhich = string_which

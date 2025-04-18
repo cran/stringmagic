@@ -313,8 +313,8 @@ check_set_dots = function(..., mc = NULL, mbt = FALSE, character = FALSE,
 
   dots = vector("list", n)
   
-  dots_nm = names(mc[["..."]]) 
-
+  dots_nm = names(mc[["..."]])
+  
   # We first catch evaluation problems
   for(i in 1:n){
     elem = try(...elt(i), silent = TRUE)
@@ -500,12 +500,45 @@ check_set_width = function(width_expr){
   data = list(.sw = sw)
   width = eval(width_expr, data, parent.frame(2))
   
-  if(isFALSE(width)){
+  if(inherits(width, "formula")){
+    
+    if(length(width) != 2){
+      stop_up("If the argument `.width` is a formula, it must be a one sided formula.",
+              "\nPROBLEM: this is a two sided formula.")
+    }
+    
+    width = eval(width[[2]], data, parent.frame(2))
+    
+  } else if(is.null(width)){
+    width = min(100, 0.9 * sw)
+    
+  } else if(isFALSE(width)){
     width = Inf
-  }
-  
-  if(is.null(width)){
-    width = min(120, 0.9 * sw)
+    
+  } else {
+    
+    if(length(width) != 1){
+      stop_up("The argument `.width` must be either: 1) an integer scalar, 2) a number between 0 and 1, 3) FALSE, 4) NULL, 5) a one sided formula with the variable .sw (representing the current screen width).",
+              "\nPROBLEM: it is not FALSE, nor NULL nor a formula, but is not of length 1. ",
+              "Instead it is of length ", length(width), ".")
+    } 
+    
+    if(!is.numeric(width)){
+      stop_up("The argument `.width` must be either: 1) an integer scalar, 2) a number between 0 and 1, 3) FALSE, 4) NULL, 5) a one sided formula with the variable .sw (representing the current screen width).",
+              "\nPROBLEM: it is not FALSE, nor NULL nor a formula, but is not numeric. ",
+              "Instead it is of class ", class(width)[1], ".")
+    }
+    
+    if(width < 2){
+      if(width < 0){
+        stop_up("The argument `.width` must be either: 1) an integer scalar, 2) a number between 0 and 1, 3) FALSE, 4) NULL, 5) a one sided formula with the variable .sw (representing the current screen width).",
+              "\nPROBLEM: it is not FALSE, nor NULL nor a formula, but is not a positive number. ",
+              "It is lower than 0 (", width, ").")
+      }
+      
+      width = width * sw
+    }
+    
   }
   
   width
@@ -1341,7 +1374,7 @@ fit_screen = function(msg, width = NULL, leading_ws = TRUE, leader = ""){
   # Note that \t are NOT handled
   
   # eval
-  width = check_set_width(substitute(width))
+  width = check_set_width(width)
 
   N_LEAD = nchar(leader)
 
@@ -1355,7 +1388,7 @@ fit_screen = function(msg, width = NULL, leading_ws = TRUE, leader = ""){
 
   res = c()
 
-  msg_split = strsplit(msg, "\n", fixed = TRUE)[[1]]
+  msg_split = cpp_split_newlines(msg)
 
   for(m in msg_split){
     if(nchar(m) <= MAX_WIDTH){

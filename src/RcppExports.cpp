@@ -119,6 +119,59 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cpp_create_pos
+IntegerVector cpp_create_pos(IntegerVector index);
+RcppExport SEXP _stringmagic_cpp_create_pos(SEXP indexSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< IntegerVector >::type index(indexSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_create_pos(index));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_table
+IntegerVector cpp_table(IntegerVector index, int n_items);
+RcppExport SEXP _stringmagic_cpp_table(SEXP indexSEXP, SEXP n_itemsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< IntegerVector >::type index(indexSEXP);
+    Rcpp::traits::input_parameter< int >::type n_items(n_itemsSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_table(index, n_items));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_format_numeric
+SEXP cpp_format_numeric(SEXP R_x, SEXP R_digits, SEXP R_signif, SEXP R_int_as_double, SEXP minus_sign, SEXP decimal, SEXP big_mark, SEXP small_mark, SEXP prefix, SEXP suffix);
+RcppExport SEXP _stringmagic_cpp_format_numeric(SEXP R_xSEXP, SEXP R_digitsSEXP, SEXP R_signifSEXP, SEXP R_int_as_doubleSEXP, SEXP minus_signSEXP, SEXP decimalSEXP, SEXP big_markSEXP, SEXP small_markSEXP, SEXP prefixSEXP, SEXP suffixSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< SEXP >::type R_x(R_xSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type R_digits(R_digitsSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type R_signif(R_signifSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type R_int_as_double(R_int_as_doubleSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type minus_sign(minus_signSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type decimal(decimalSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type big_mark(big_markSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type small_mark(small_markSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type prefix(prefixSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type suffix(suffixSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_format_numeric(R_x, R_digits, R_signif, R_int_as_double, minus_sign, decimal, big_mark, small_mark, prefix, suffix));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_split_newlines
+SEXP cpp_split_newlines(SEXP x);
+RcppExport SEXP _stringmagic_cpp_split_newlines(SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type x(xSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_split_newlines(x));
+    return rcpp_result_gen;
+END_RCPP
+}
 // cpp_string_magic_parser
 List cpp_string_magic_parser(SEXP Rstr, SEXP Rdelimiters, bool only_last_parsed_section);
 RcppExport SEXP _stringmagic_cpp_string_magic_parser(SEXP RstrSEXP, SEXP RdelimitersSEXP, SEXP only_last_parsed_sectionSEXP) {
@@ -203,37 +256,13 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// cpp_to_integer
-IntegerVector cpp_to_integer(SEXP x);
-RcppExport SEXP _stringmagic_cpp_to_integer(SEXP xSEXP) {
+// cpp_to_index
+SEXP cpp_to_index(SEXP x);
+RcppExport SEXP _stringmagic_cpp_to_index(SEXP xSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type x(xSEXP);
-    rcpp_result_gen = Rcpp::wrap(cpp_to_integer(x));
-    return rcpp_result_gen;
-END_RCPP
-}
-// cpp_combine_clusters
-IntegerVector cpp_combine_clusters(SEXP cluster_list, IntegerVector index);
-RcppExport SEXP _stringmagic_cpp_combine_clusters(SEXP cluster_listSEXP, SEXP indexSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type cluster_list(cluster_listSEXP);
-    Rcpp::traits::input_parameter< IntegerVector >::type index(indexSEXP);
-    rcpp_result_gen = Rcpp::wrap(cpp_combine_clusters(cluster_list, index));
-    return rcpp_result_gen;
-END_RCPP
-}
-// cpp_create_pos
-IntegerVector cpp_create_pos(IntegerVector index);
-RcppExport SEXP _stringmagic_cpp_create_pos(SEXP indexSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< IntegerVector >::type index(indexSEXP);
-    rcpp_result_gen = Rcpp::wrap(cpp_create_pos(index));
+    rcpp_result_gen = Rcpp::wrap(cpp_to_index(x));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -248,6 +277,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stringmagic_cpp_group_rev_index", (DL_FUNC) &_stringmagic_cpp_group_rev_index, 1},
     {"_stringmagic_cpp_recreate_index", (DL_FUNC) &_stringmagic_cpp_recreate_index, 1},
     {"_stringmagic_cpp_parse_regex_pattern", (DL_FUNC) &_stringmagic_cpp_parse_regex_pattern, 3},
+    {"_stringmagic_cpp_create_pos", (DL_FUNC) &_stringmagic_cpp_create_pos, 1},
+    {"_stringmagic_cpp_table", (DL_FUNC) &_stringmagic_cpp_table, 2},
+    {"_stringmagic_cpp_format_numeric", (DL_FUNC) &_stringmagic_cpp_format_numeric, 10},
+    {"_stringmagic_cpp_split_newlines", (DL_FUNC) &_stringmagic_cpp_split_newlines, 1},
     {"_stringmagic_cpp_string_magic_parser", (DL_FUNC) &_stringmagic_cpp_string_magic_parser, 3},
     {"_stringmagic_cpp_extract_quote_from_op", (DL_FUNC) &_stringmagic_cpp_extract_quote_from_op, 1},
     {"_stringmagic_cpp_parse_operator", (DL_FUNC) &_stringmagic_cpp_parse_operator, 1},
@@ -255,9 +288,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stringmagic_cpp_parse_simple_operations", (DL_FUNC) &_stringmagic_cpp_parse_simple_operations, 2},
     {"_stringmagic_cpp_magic_split", (DL_FUNC) &_stringmagic_cpp_magic_split, 3},
     {"_stringmagic_cpp_find_closing_problem", (DL_FUNC) &_stringmagic_cpp_find_closing_problem, 2},
-    {"_stringmagic_cpp_to_integer", (DL_FUNC) &_stringmagic_cpp_to_integer, 1},
-    {"_stringmagic_cpp_combine_clusters", (DL_FUNC) &_stringmagic_cpp_combine_clusters, 2},
-    {"_stringmagic_cpp_create_pos", (DL_FUNC) &_stringmagic_cpp_create_pos, 1},
+    {"_stringmagic_cpp_to_index", (DL_FUNC) &_stringmagic_cpp_to_index, 1},
     {NULL, NULL, 0}
 };
 

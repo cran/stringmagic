@@ -14,10 +14,8 @@ cat_magic_alias(
   .end = "",
   .width = FALSE,
   .leader = "",
-  .vectorize = FALSE,
   .delim = c("{", "}"),
   .last = NULL,
-  .collapse = NULL,
   .trigger = TRUE,
   .check = TRUE,
   .namespace = NULL
@@ -26,12 +24,10 @@ cat_magic_alias(
 message_magic_alias(
   .sep = "",
   .end = "\\n",
-  .width = FALSE,
+  .width = ~min(100, .sw),
   .leader = "",
-  .vectorize = FALSE,
   .delim = c("{", "}"),
   .last = NULL,
-  .collapse = NULL,
   .trigger = TRUE,
   .check = TRUE,
   .namespace = NULL
@@ -44,10 +40,8 @@ cat_magic(
   .width = FALSE,
   .leader = "",
   .envir = parent.frame(),
-  .vectorize = FALSE,
   .delim = c("{", "}"),
   .last = NULL,
-  .collapse = NULL,
   .trigger = TRUE,
   .check = TRUE,
   .help = NULL,
@@ -61,10 +55,8 @@ catma(
   .width = FALSE,
   .leader = "",
   .envir = parent.frame(),
-  .vectorize = FALSE,
   .delim = c("{", "}"),
   .last = NULL,
-  .collapse = NULL,
   .trigger = TRUE,
   .check = TRUE,
   .help = NULL,
@@ -78,10 +70,8 @@ message_magic(
   .width = NULL,
   .leader = "",
   .envir = parent.frame(),
-  .vectorize = FALSE,
   .delim = c("{", "}"),
   .last = NULL,
-  .collapse = NULL,
   .trigger = TRUE,
   .check = TRUE,
   .help = NULL,
@@ -95,10 +85,8 @@ mema(
   .width = NULL,
   .leader = "",
   .envir = parent.frame(),
-  .vectorize = FALSE,
   .delim = c("{", "}"),
   .last = NULL,
-  .collapse = NULL,
   .trigger = TRUE,
   .check = TRUE,
   .help = NULL,
@@ -109,28 +97,27 @@ mema(
 \item{.sep}{Character scalar, default is the empty string \code{""}. It is used to collapse all
 the elements in \code{...} before applying any operation.}
 
-\item{.end}{Character scalar, default is \code{""} (the empty string). This string
-will be collated at the end of the message (a common alternative is \code{"\\n"}).}
+\item{.end}{Character scalar, default is \code{""} (the empty string) for \code{cat_magic},
+and \code{"\\n"} (a newline) for \code{message_magic}.
+This string will be collated at the end of the message (a common alternative is \code{"\\n"}).}
 
 \item{.width}{Can be 1) a positive integer, 2) a number in (0;1), 3) \code{FALSE} (default
-for \code{cat_magic}), or 4) \code{NULL} (default for \code{message_magic}). It represents the target
+for \code{cat_magic}), 4) \code{NULL} (default for \code{message_magic}), or 5) a one-sided formula. It represents the target
 width of the message on the user console. Newlines will be added \emph{between words} to fit the
 target width.
 \enumerate{
 \item positive integer: number of characters
 \item number (0;1): fraction of the screen
 \item \code{FALSE}: does not add newlines
-\item \code{NULL}: the min between 120 characters and 90\% of the screen width
+\item \code{NULL}: the min between 100 characters and 90\% of the screen width
+\item one-sided formula: an expression in which you can use the special variable
+\code{.sw} which represents the current screen width
 }
 
-Note that you can use the special variable \code{.sw} to refer to the screen width. Hence the value
-\code{NULL} is equivalent to using \code{min(120, 0.9*.sw)}.}
+Note that the value \code{NULL} is equivalent to using \code{~min(100, 0.9*.sw)}.}
 
 \item{.leader}{Character scalar, default is \code{TRUE}. Only used if argument \code{.width} is not \code{FALSE}.
 Whether to add a leading character string right after the extra new lines.}
-
-\item{.vectorize}{Logical scalar, default is \code{FALSE}. If \code{TRUE}, Further, elements in \code{...} are
-NOT collapsed together, but instead vectorised.}
 
 \item{.delim}{Character vector of length 1 or 2. Default is \code{c("{", "}")}. Defines
 the opening and the closing delimiters for interpolation.
@@ -146,10 +133,6 @@ The default value is equivalent to \code{"{ }"}.
 it must be an \code{string_magic} chain of operations of the form \code{"'arg1'op1, op2, etc"}. All these operations
 are applied just before returning the vector. If a function,
 it will be applied to the resulting vector.}
-
-\item{.collapse}{Character scalar, default is \code{NULL}. If provided, the character vector
-that should be returned is collapsed with the value of this argument. This leads
-to return a string of length 1.}
 
 \item{.trigger}{Logical, default is \code{TRUE}. If \code{FALSE}, this function is not run. Can be
 useful in debugging situations where we want conditional evaluations.}
@@ -207,7 +190,7 @@ These functions are \code{\link[base:cat]{base::cat()}}/\code{\link[=message]{me
 with respect to \code{cat}/\code{message}. It's the ability to add newlines after words for
 the message to fit a target width. This is controlled with the argument \code{.width}. This is
 active by default for \code{message_magic} (default is \code{.width = NULL} which leads to the
-minimum betwen 120 characters and 90\% of the screen width).
+minimum betwen 100 characters and 90\% of the screen width).
 
 You can very easily change the default values with the alias generators \code{cat_magic_alias} and
 \code{message_magic_alias}.
@@ -252,17 +235,6 @@ cat_magic("Here's a list:",
           "    + this is a very long item that likely overflows", 
          .width = 30, .sep = "\n")
 
-#
-# define custom defaults
-#
-
-# Unhappy about the default values? Create an alias!
-
-# Here we change the defaults to mimic the printing of a column
-cat_column = cat_magic_alias(.sep = "\n", .end = "\n", .vectorize = TRUE, 
-                            .last = "fill.center, ' + 'paste.both")
-
-cat_column("code string_magic", "write the docs", "write the vignettes")
 
 }
 \seealso{

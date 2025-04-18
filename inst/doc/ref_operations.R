@@ -163,6 +163,16 @@ string_magic("{rev, ''collapse ? 1:3}")
 string_magic("Iris species: {unik, upper.first, enum ? iris$Species}.")
 
 ## -----------------------------------------------------------------------------
+dna = string_split("atagggagctacctgcgcgtcgcccaaaagcaggg", "")
+cat_magic("Letters in the DNA seq. {''c, Q? dna}: ",
+          "  -      default: {table, enum ? dna}",
+          "  - value sorted: {table.sort, enum ? dna}",
+          "  -       shares: {'{x} [{round(s * 100)}%]' table, enum ? dna}",
+          # `fsort` sorts by **increasing** frequency
+          "  - freq. sorted: {'{q ? x}' table.fsort, enum ? dna}",
+          .sep = "\n")
+
+## -----------------------------------------------------------------------------
 # note: operation `S` splits splits wrt to commas (default behavior)
 string_magic("{S!x, y}{2 each ? 1:2}")
 
@@ -247,6 +257,36 @@ string_magic("Is he {stop, ws, enum ? x}?")
 ## -----------------------------------------------------------------------------
 author = "Laurent Bergé"
 string_magic("This package has been developped by {ascii ? author}.")
+
+## -----------------------------------------------------------------------------
+# rounding at 2 digits
+cat_magic("pi = {r2 ? pi}\n",
+          # same as above with a different syntax
+          "pi = {round.2 ? pi}")
+
+x = c(153, 207.256, 0.00254, 15231312.2)
+# keeping one significant digit
+cat_magic("v1: {s1, align ? x} ",
+          # removing the comma for large numbers and preserving ints
+          "v2: {s1.int.nocomma ? x}", .collapse = "\n")
+          
+# combining signif with round
+y = c(pi, 0.00125)
+cat_magic("raw: {align ? y} ",
+          "s1: {s1, align ? y} ", 
+          "r2: {r2, align ? y} ",
+          "s1.r2: {s1.r2 ? y}", .collapse = "\n")
+
+# prefix and prefix: use and argument
+z = c(55, 22.5, 21)
+cat_magic("Costs in euros  : {' €'r1, enum ? z}.",
+          "\nCosts in dollars: {'USD |'r1, enum ? z}.")
+
+# non numeric values are preserved
+xraw = c("55", "five")
+string_magic("Valuess {r1, enum ? xraw}.")
+# use the `num` command for more control
+string_magic("Values: {num.rm, r1, enum ? xraw}.")
 
 ## -----------------------------------------------------------------------------
 x = c(5, 12, 52123)
@@ -357,9 +397,9 @@ string_magic("Its size is {Len ? 1:8}")
 ## -----------------------------------------------------------------------------
 x = "this is a long sentence"
 cat_magic("------ version 0 ------\n{x}", 
-          "------ version 1 ------\n{15 width ? x}", 
-          "------ version 2 ------\n{'15|#>'width ? x}",
-          "------ version 3 ------\n{'15|#>_'width ? x}", .sep = "\n")
+          "------ version 1 ------\n{15 swidth ? x}", 
+          "------ version 2 ------\n{'15|#>'swidth ? x}",
+          "------ version 3 ------\n{'15|#>_'swidth ? x}", .sep = "\n")
 
 ## -----------------------------------------------------------------------------
 x = Sys.time()

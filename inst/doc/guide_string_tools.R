@@ -12,7 +12,7 @@ options("string_magic_string_get_forced_caching" = TRUE)
 
 ## -----------------------------------------------------------------------------
 cars = row.names(mtcars)
-cat_magic("All cars from mtcars:\n{C, 60 width ? cars}")
+cat_magic("All cars from mtcars:\n{C, 60 swidth ? cars}")
 
 # cars with an 'a', an 'e', an 'i', and an 'o', all in lower case
 string_get(cars, "a & e & i & o")

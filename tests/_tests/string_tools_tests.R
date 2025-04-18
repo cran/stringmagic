@@ -198,13 +198,13 @@ test(val$x, c("Nor", "rain", "wind", "When", "my", "information"))
 test(val$obs, c(1L, 1L, 1L, 2L, 2L, 2L))
 test(val$id, c("ws", "ws", "ws", "jmk", "jmk", "jmk"))
 
-base = data.frame(text = x, my_id = id)
+base = data.frame(text = x, my_id = id, stringsAsFactors = FALSE)
 val = string_split2df(text ~ my_id, base, "[[:punct:] ]+")
 test(val$text, c("Nor", "rain", "wind", "When", "my", "information"))
 test(val$obs, c(1L, 1L, 1L, 2L, 2L, 2L))
 test(val$my_id, c("ws", "ws", "ws", "jmk", "jmk", "jmk"))
 
-base = data.frame(text = x, my_id = id)
+base = data.frame(text = x, my_id = id, stringsAsFactors = FALSE)
 val = string_split2df(text ~ my_id, base, "[[:punct:] ]+", add.pos = TRUE)
 test(val$pos, c(1L, 2L, 3L, 1L, 2L, 3L))
 
@@ -256,13 +256,13 @@ test(txt, c("Jules", "Ana", "Charles", "Francis", "RM", "JC"))
 
 # with/without variable protection
 x = "x{{1:2}}, xx"
-txt = string_vec(x, "y{{1:3}}", .delim = "{{ }}")
+txt = string_vec(x, "y{{1:3}}", .delim = "{{ }}", .protect.vars = TRUE)
 test(txt, c("x{{1:2}}, xx", "y1", "y2", "y3"))
 
-txt = string_vec(x, "y{{1:3}}", .delim = "{{ }}", .protect.vars = FALSE)
+txt = string_vec(x, "y{{1:3}}", .delim = "{{ }}")
 test(txt, c("x1", "x2", "xx", "y1", "y2", "y3"))
 
-txt = string_vec(x, "y{{1:3}}", .delim = "{{ }}", .protect.vars = FALSE, .split = FALSE)
+txt = string_vec(x, "y{{1:3}}", .delim = "{{ }}", .split = FALSE)
 test(txt, c("x1, xx", "x2, xx", "y1", "y2", "y3"))
 
 # split
@@ -298,10 +298,13 @@ mat = string_vec("1, john,\n 3, marie,\n 5, harry", .cmat = TRUE)
 test(mat, structure(c("1", "3", "5", "john", "marie", "harry"), dim = 3:2))
 
 df = string_vec("1, john,\n 3, marie,\n 5, harry", .df = TRUE)
-test(df, data.frame(V1 = c(1, 3, 5), V2 = c("john", "marie", "harry")))
+target = data.frame(V1 = c(1, 3, 5), V2 = c("john", "marie", "harry"), 
+                    stringsAsFactors = FALSE)
+test(df, target)
 
 df = string_vec("1, john,\n 3, marie,\n 5, harry", .df = "id, name")
-test(df, data.frame(id = c(1, 3, 5), name = c("john", "marie", "harry")))
+names(target) = c("id", "name")
+test(df, target)
 test(names(df), c("id", "name"))
 
 df = string_vec("1, john,\n 3, marie,\n 5, harry", .df = c("id", "name"))
@@ -349,6 +352,7 @@ test(val, val_bis)
 ####
 #### string_split ####
 ####
+
 
 time = "This is the year 2024."
 
